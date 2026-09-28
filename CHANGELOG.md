@@ -19,4 +19,6 @@ První veřejná verze.
 - ElevenLabs hlasy s „hereckým“ přednesem (`eleven_v3` audio tagy), časování slov, zvukové efekty, cache a odhad spotřeby.
 - Záložní systémové hlasy (macOS `say`) s posunem výšky a tempa pro odlišení postav; Web Speech jinde.
 - Přehrávač jako film: plynulá kamera mezi okénky, reflektor, svítící bublina, titulky se zvýrazněním slov, třesení kamery u efektů, klávesové zkratky, pokračování od posledního místa.
-- Šifrované ukládání API klíčů, testovací režim bez AI, unit a E2E testy, CI.
+- Okamžité spuštění přehrávání: hlasy se namlouvají na pozadí, repliky potřebné pro přehrávač mají přednost.
+- Náhledy stránek (menší spotřeba paměti u velkých komiksů), automatické opakování stránek, které selhaly.
+- Šifrované ukládání API klíčů, testovací režim bez AI, unit, integrační a E2E testy, CI.

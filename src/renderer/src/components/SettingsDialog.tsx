@@ -125,13 +125,16 @@ export function SettingsDialog({
             >
               {OPENAI_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.label} – {m.hint}
+                  {m.label}
                 </option>
               ))}
               {!OPENAI_MODELS.some((m) => m.id === s.openaiModel) && (
                 <option value={s.openaiModel}>{s.openaiModel}</option>
               )}
             </select>
+            <small className="faint">
+              {OPENAI_MODELS.find((m) => m.id === s.openaiModel)?.hint ?? 'Vlastní model'}
+            </small>
           </label>
           <label className="field">
             <span>Důkladnost</span>
@@ -184,10 +187,11 @@ export function SettingsDialog({
                 >
                   {ELEVEN_MODELS.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.label} – {m.hint}
+                      {m.label}
                     </option>
                   ))}
                 </select>
+                <small className="faint">{ELEVEN_MODELS.find((m) => m.id === s.elevenModel)?.hint}</small>
               </label>
               <label className="field">
                 <span>Projev</span>
