@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@renderer/*": ["src/renderer/src/*"]
+    }
+  },
+  "include": ["test/**/*", "src/shared/**/*", "src/main/ai/convert.ts", "src/main/ai/prompts.ts", "src/main/tts/voiceInfo.ts", "src/main/tts/wav.ts", "src/renderer/src/cv/**/*"]
+}
