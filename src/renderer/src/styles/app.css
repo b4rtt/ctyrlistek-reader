@@ -1109,31 +1109,34 @@ input[type='checkbox'] {
 }
 .spotlight {
   position: absolute;
-  border-radius: 6px;
-  box-shadow: 0 0 0 400vmax rgba(4, 7, 5, 0.74);
+  border-radius: 10px;
+  /* Soft feathered edge + gentle dimming of the rest of the page. */
+  box-shadow:
+    0 0 36px 18px rgba(4, 7, 5, 0.45),
+    0 0 0 400vmax rgba(4, 7, 5, 0.5);
   pointer-events: none;
   transition-property: left, top, width, height, opacity;
   transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
 }
+/* The speaking balloon gets a calm, soft halo in the speaker's colour. */
 .bubble-glow {
   position: absolute;
-  border-radius: 38%;
+  border-radius: 42%;
   pointer-events: none;
   box-shadow:
-    0 0 0 3px var(--char),
-    0 0 26px 6px color-mix(in srgb, var(--char) 65%, transparent);
-  animation: glow 1.6s ease-in-out infinite;
+    0 0 0 2px color-mix(in srgb, var(--char) 45%, transparent),
+    0 0 22px 6px color-mix(in srgb, var(--char) 28%, transparent);
+  animation: glowIn 450ms ease-out both;
   transition:
     left 300ms var(--ease),
     top 300ms var(--ease),
     width 300ms var(--ease),
     height 300ms var(--ease);
 }
-@keyframes glow {
-  50% {
-    box-shadow:
-      0 0 0 4px var(--char),
-      0 0 40px 12px color-mix(in srgb, var(--char) 45%, transparent);
+@keyframes glowIn {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
   }
 }
 .hit {

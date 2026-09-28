@@ -6,7 +6,7 @@ import { useNav } from '../App'
 import { api, assetUrl, errorMessage } from '../api'
 import { Icon } from '../components/Icon'
 import { Portrait } from '../components/Portrait'
-import { useToast } from '../components/ui'
+import { Segmented, useToast } from '../components/ui'
 import { getSettingsSnapshot, loadSettings, updateSettings, useSettings } from '../hooks/useSettings'
 import { frame } from '../player/camera'
 import { PlayerController, type PlayerState } from '../player/controller'
@@ -214,18 +214,20 @@ export function Player({ id }: { id: string }): React.JSX.Element {
   }, [cameraPage, doc])
 
   const subtitles = liveSettings?.subtitles ?? true
+  const zoom = liveSettings?.zoom ?? 'medium'
   const framing = useMemo(() => {
     if (!doc || !state) return null
     const page = doc.pages[state.camera.page]
     if (!page) return null
     // Constant margins: the page must not jump when the controls fade out.
-    return frame(state.camera.rect, page.width, page.height, {
-      width: vp.width,
-      height: vp.height,
-      top: 40,
-      bottom: subtitles ? 150 : 100,
-    })
-  }, [doc, state, vp, subtitles])
+    return frame(
+      state.camera.rect,
+      page.width,
+      page.height,
+      { width: vp.width, height: vp.height, top: 40, bottom: subtitles ? 150 : 100 },
+      zoom,
+    )
+  }, [doc, state, vp, subtitles, zoom])
 
   if (!doc || !state || !framing) {
     return (
@@ -288,12 +290,13 @@ export function Player({ id }: { id: string }): React.JSX.Element {
           />
           {line?.bubble && (
             <div
+              key={line.id}
               className="bubble-glow"
               style={{
-                left: `${(line.bubble.x - 0.004) * 100}%`,
-                top: `${(line.bubble.y - 0.004) * 100}%`,
-                width: `${(line.bubble.w + 0.008) * 100}%`,
-                height: `${(line.bubble.h + 0.008) * 100}%`,
+                left: `${(line.bubble.x - 0.006) * 100}%`,
+                top: `${(line.bubble.y - 0.005) * 100}%`,
+                width: `${(line.bubble.w + 0.012) * 100}%`,
+                height: `${(line.bubble.h + 0.01) * 100}%`,
               }}
             />
           )}
@@ -483,6 +486,18 @@ export function Player({ id }: { id: string }): React.JSX.Element {
                 onChange={(e) => void updateSettings({ pageIntro: e.target.checked })}
               />
               Ukázat celou stránku
+            </label>
+            <label className="field">
+              <span>Přiblížení</span>
+              <Segmented
+                value={liveSettings.zoom}
+                onChange={(v) => void updateSettings({ zoom: v })}
+                options={[
+                  { value: 'soft', label: 'Jemné' },
+                  { value: 'medium', label: 'Střední' },
+                  { value: 'strong', label: 'Výrazné' },
+                ]}
+              />
             </label>
             <label className="field">
               <span>Tempo</span>

@@ -8,7 +8,7 @@
  */
 import type { Settings } from '@shared/api'
 import { activeWordIndex } from '@shared/alignment'
-import { FULL_PAGE } from '@shared/geometry'
+import { FULL_PAGE, panelFocus } from '@shared/geometry'
 import { buildTimeline, beatLine, beatPanel, pageStartIndex, type Beat } from '@shared/timeline'
 import type { AudioRef, Character, ComicDoc, Line, Rect, WordTiming } from '@shared/types'
 import { systemProsody } from '@shared/performance'
@@ -230,13 +230,21 @@ export class PlayerController {
         const panel = beatPanel(this.doc, b)
         if (panel)
           this.set({
-            camera: { page: b.page, rect: panel.rect, duration: cameraMoves.panelMove, spotlight: true },
+            camera: {
+              page: b.page,
+              rect: panelFocus(panel),
+              duration: cameraMoves.panelMove,
+              spotlight: true,
+            },
           })
         if (!(await this.wait(cameraMoves.panelMove * 0.85, gen))) return
       }
 
       const line = beatLine(this.doc, b)
       if (line) {
+        if (this.state.line?.id !== line.id) {
+          this.set({ line, speaker: speakerOf(this.doc, line) ?? null, words: null, word: -1 })
+        }
         if (!(await this.speak(line, gen))) return
         const next = this.beats[i + 1]
         const nextLine = next ? beatLine(this.doc, next) : null
@@ -278,17 +286,25 @@ export class PlayerController {
         panelMove = 1100
       } else if (jump || newPage) {
         this.set({
-          camera: { page: b.page, rect: panel.rect, duration: jump && !newPage ? 700 : 0, spotlight: true },
+          camera: {
+            page: b.page,
+            rect: panelFocus(panel),
+            duration: jump && !newPage ? 700 : 0,
+            spotlight: true,
+          },
         })
       } else if (b.panelStart) {
-        panelMove = easeDuration(prev.rect, panel.rect)
+        panelMove = easeDuration(prev.rect, panelFocus(panel))
       }
     }
 
+    // While the camera travels, show no subtitle/halo – they appear together
+    // with the voice (see run()), so they always match what is on screen.
+    const moving = pageIntro || panelMove > 0
     this.set({
       beat: i,
-      line: line ?? null,
-      speaker: line ? (speakerOf(this.doc, line) ?? null) : null,
+      line: moving ? null : (line ?? null),
+      speaker: moving || !line ? null : (speakerOf(this.doc, line) ?? null),
       words: null,
       word: -1,
       loading: false,

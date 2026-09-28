@@ -78,3 +78,14 @@ export function rectToBox(r: Rect, w: number, h: number): { x0: number; y0: numb
 }
 
 export const FULL_PAGE: Rect = { x: 0, y: 0, w: 1, h: 1 }
+
+/**
+ * Area the camera should show for a panel: the panel itself plus every balloon
+ * of its lines – balloons often stick out over the border into the gutter or
+ * a neighbouring panel and must never be cut off.
+ */
+export function panelFocus(panel: { rect: Rect; lines: { bubble: Rect | null }[] }): Rect {
+  let r = panel.rect
+  for (const l of panel.lines) if (l.bubble) r = union(r, l.bubble)
+  return clampUnit(r) ?? panel.rect
+}
