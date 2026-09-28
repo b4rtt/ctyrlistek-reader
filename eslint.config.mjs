@@ -5,7 +5,7 @@ import globals from 'globals'
 
 export default tseslint.config(
   {
-    ignores: ['out/**', 'dist/**', 'release/**', 'node_modules/**', 'src/renderer/public/**', 'coverage/**'],
+    ignores: ['out/**', 'dist/**', 'release/**', 'node_modules/**', 'src/renderer/public/**', 'coverage/**', 'test-results/**', '.e2e-data/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,7 +19,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,cjs}', '*.config.{js,ts}'],
+    files: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'scripts/**/*.{js,mjs,cjs}', '*.config.{js,mjs,ts}'],
     languageOptions: { globals: globals.node },
   },
   {

@@ -7,6 +7,12 @@ import { registerProtocols, registerSchemesAsPrivileged } from './protocol'
 // Must run before the app is ready.
 registerSchemesAsPrivileged()
 app.setName('Čtyřlístek Reader')
+// The default User-Agent embeds the app name; HTTP headers must be ASCII or
+// custom-protocol requests fail ("Cannot convert argument to a ByteString").
+app.userAgentFallback = app.userAgentFallback
+  .normalize('NFD')
+  .replace(/\p{M}/gu, '')
+  .replace(/[^\x20-\x7e]/g, '')
 if (process.env.CTYRLISTEK_DATA_DIR) app.setPath('userData', dataDir())
 
 const isDev = !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL

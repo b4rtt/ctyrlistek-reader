@@ -16,6 +16,32 @@ export function normalizeName(name: string): string {
     .trim()
 }
 
+/** Descriptive labels that do not identify one specific character. */
+const GENERIC_NAMES = new Set([
+  'muz',
+  'zena',
+  'chlapec',
+  'divka',
+  'dite',
+  'deti',
+  'postava',
+  'neznamy',
+  'neznama',
+  'neznama postava',
+  'neznamy muz',
+  'neznama zena',
+  'hlas',
+  'dav',
+  'lide',
+  'pan',
+  'pani',
+  'zvire',
+])
+
+export function isGenericName(name: string): boolean {
+  return GENERIC_NAMES.has(normalizeName(name))
+}
+
 export function slugify(name: string): string {
   return normalizeName(name).replace(/ /g, '-').slice(0, 32) || 'postava'
 }
@@ -103,10 +129,9 @@ export function resolveCharacters(doc: ComicDoc, pageIndex: number, result: Anal
 
   for (const ai of result.characters) {
     let target = byId.get(ai.key)
-    if (!target && ai.name.trim()) {
-      const candidate = byName.get(normalizeName(ai.name))
-      // Only merge by name when the name is a real name, not a description.
-      if (candidate && (candidate.nameConfidence !== 'low' || ai.nameConfidence !== 'low')) target = candidate
+    if (!target && ai.name.trim() && !isGenericName(ai.name)) {
+      // Same (specific) name on another page → same character.
+      target = byName.get(normalizeName(ai.name))
     }
     if (target) {
       const updated = improveCharacter(target, ai, pageIndex)

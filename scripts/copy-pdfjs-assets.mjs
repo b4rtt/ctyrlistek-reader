@@ -15,7 +15,7 @@ try {
 
 const target = join(process.cwd(), 'src/renderer/public/pdfjs')
 mkdirSync(target, { recursive: true })
-for (const dir of ['cmaps', 'standard_fonts']) {
+for (const dir of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) {
   const from = join(pdfjsRoot, dir)
   if (existsSync(from)) cpSync(from, join(target, dir), { recursive: true })
 }
