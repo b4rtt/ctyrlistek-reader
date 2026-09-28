@@ -8,7 +8,8 @@ import type { CharAlignment } from '@shared/alignment'
 import { getSecret } from '../settings'
 import { toVoiceInfo, type RawVoice } from './voiceInfo'
 
-const API = 'https://api.elevenlabs.io'
+/** Overridable for integration tests. */
+const API = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io'
 
 export class ElevenError extends Error {
   constructor(
