@@ -6,6 +6,8 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), ve
 
 ### Přidáno
 
+- Přehrávání na televizi (AirPlay / HDMI): celoobrazovkové okno na televizi s velkými titulky, počítač slouží jako dálkový ovladač (pauza, repliky, strany, přiblížení, titulky, výběr zvukového výstupu); průvodce připojením AirPlay, automatický start po připojení televize.
+
 - Korekturní průchod AI: kontrola mluvčích podle ocásků bublin, pořadí replik podle logiky dialogu a vyřazení zdvojených textů.
 - Nastavení _Přiblížení okének_ (jemné / střední / výrazné), i v menu přehrávače.
 - Tlačítko „Celý komiks“ v editoru – znovu přečte všechny strany.

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { Settings } from '@shared/api'
+import type { AudioOutput, Settings, TvCommand } from '@shared/api'
 import { EMOTION_META } from '@shared/performance'
 import type { ComicDoc } from '@shared/types'
 import { useNav } from '../App'
 import { api, assetUrl, errorMessage } from '../api'
 import { Icon } from '../components/Icon'
 import { Portrait } from '../components/Portrait'
+import { TvDialog } from '../components/TvDialog'
 import { Segmented, useToast } from '../components/ui'
 import { getSettingsSnapshot, loadSettings, updateSettings, useSettings } from '../hooks/useSettings'
 import { frame } from '../player/camera'
@@ -64,7 +65,16 @@ function Words({
   return <>{out}</>
 }
 
-export function Player({ id }: { id: string }): React.JSX.Element {
+interface PlayerProps {
+  id: string
+  /** `tv` = fullscreen window on the TV, driven by the remote (main window). */
+  mode?: 'local' | 'tv'
+  /** TV mode: beat to start playing from. */
+  startBeat?: number
+}
+
+export function Player({ id, mode = 'local', startBeat = 0 }: PlayerProps): React.JSX.Element {
+  const tv = mode === 'tv'
   const { go } = useNav()
   const toast = useToast()
   const liveSettings = useSettings()
@@ -74,6 +84,8 @@ export function Player({ id }: { id: string }): React.JSX.Element {
   const [vp, setVp] = useState({ width: window.innerWidth, height: window.innerHeight })
   const [chrome, setChrome] = useState(true)
   const [menu, setMenu] = useState(false)
+  const [tvDialog, setTvDialog] = useState(false)
+  const [outputs, setOutputs] = useState<AudioOutput[]>([])
   const ctrl = useRef<PlayerController | null>(null)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -94,13 +106,98 @@ export function Player({ id }: { id: string }): React.JSX.Element {
       setDoc(prepared.doc)
       setSettings(prepared.settings)
       c.subscribe(setState)
+      if (tv) c.start(startBeat)
     })().catch((err) => toast(errorMessage(err), 'error'))
     return () => {
       disposed = true
       ctrl.current?.destroy()
       ctrl.current = null
     }
-  }, [id, toast])
+  }, [id, toast, tv, startBeat])
+
+  // ------------------------------------------------------------ TV mode --
+  useEffect(() => {
+    if (!tv) return
+    const off = api.tv.onCommand((cmd: TvCommand) => {
+      const c = ctrl.current
+      if (!c) return
+      switch (cmd.type) {
+        case 'toggle':
+          return c.toggle()
+        case 'pause':
+          return c.pause()
+        case 'next':
+          return c.next()
+        case 'prev':
+          return c.prev()
+        case 'nextPage':
+          return c.nextPage()
+        case 'prevPage':
+          return c.prevPage()
+        case 'restart':
+          return c.start(0)
+        case 'goto':
+          return c.goTo(cmd.beat)
+        case 'output':
+          c.setOutput(cmd.deviceId)
+          setOutputs((o) => [...o]) // republish
+          return
+      }
+    })
+    // Audio outputs (the AirPlay TV usually appears here, e.g. "Apple TV").
+    const loadOutputs = (): void =>
+      void navigator.mediaDevices
+        ?.enumerateDevices()
+        .then((ds) =>
+          setOutputs(
+            ds
+              .filter((d) => d.kind === 'audiooutput' && d.deviceId !== 'default' && d.label)
+              .map((d) => ({ id: d.deviceId, label: d.label })),
+          ),
+        )
+        .catch(() => undefined)
+    loadOutputs()
+    navigator.mediaDevices?.addEventListener('devicechange', loadOutputs)
+    // Remember where the child stopped when the TV window closes.
+    const onUnload = (): void => ctrl.current?.pause()
+    window.addEventListener('beforeunload', onUnload)
+    return () => {
+      off()
+      navigator.mediaDevices?.removeEventListener('devicechange', loadOutputs)
+      window.removeEventListener('beforeunload', onUnload)
+    }
+  }, [tv])
+
+  // Publish the playback state to the remote.
+  const pub = state && doc ? tvStateKey(state) : ''
+  useEffect(() => {
+    if (!tv || !state || !doc || !ctrl.current) return
+    const c = ctrl.current
+    const b = c.beats[state.beat]
+    const page = doc.pages[state.camera.page]
+    api.tv.publish({
+      comicId: doc.meta.id,
+      title: doc.meta.title,
+      display: '',
+      beat: state.beat,
+      total: c.beats.length,
+      pageStarts: c.beats.map((x, i) => (x.pageStart ? i : -1)).filter((i) => i >= 0),
+      started: state.started,
+      playing: state.playing,
+      ended: state.ended,
+      loading: state.loading,
+      page: page?.index ?? 0,
+      pageCount: doc.pages.length,
+      panel: b?.panel ?? -1,
+      thumb: page ? (page.thumb ?? page.image) : null,
+      text: state.line && state.line.kind !== 'sfx' ? state.line.text : null,
+      speaker: state.speaker?.name ?? null,
+      color: state.speaker?.color ?? null,
+      outputs,
+      output: c.output,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tv, pub, outputs])
 
   // Live settings changes (subtitles, pace…) apply immediately.
   useEffect(() => {
@@ -198,13 +295,13 @@ export function Player({ id }: { id: string }): React.JSX.Element {
           break
         case 'Escape':
           if (document.fullscreenElement) void document.exitFullscreen()
-          else exit()
+          else if (!tv) exit()
           break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [poke, exit, liveSettings])
+  }, [poke, exit, liveSettings, tv])
 
   // Preload the next page image for a seamless page turn.
   const cameraPage = state?.camera.page ?? 0
@@ -224,10 +321,15 @@ export function Player({ id }: { id: string }): React.JSX.Element {
       state.camera.rect,
       page.width,
       page.height,
-      { width: vp.width, height: vp.height, top: 40, bottom: subtitles ? 150 : 100 },
+      {
+        width: vp.width,
+        height: vp.height,
+        top: tv ? 20 : 40,
+        bottom: subtitles ? (tv ? 200 : 150) : tv ? 20 : 100,
+      },
       zoom,
     )
-  }, [doc, state, vp, subtitles, zoom])
+  }, [doc, state, vp, subtitles, zoom, tv])
 
   if (!doc || !state || !framing) {
     return (
@@ -256,7 +358,7 @@ export function Player({ id }: { id: string }): React.JSX.Element {
 
   return (
     <div
-      className={`player ${chrome ? '' : 'chrome-hidden idle'}`}
+      className={`player ${tv ? 'tv chrome-hidden idle' : chrome ? '' : 'chrome-hidden idle'}`}
       onMouseMove={poke}
       onClick={() => setMenu(false)}
       style={{ '--char': color } as React.CSSProperties}
@@ -369,153 +471,165 @@ export function Player({ id }: { id: string }): React.JSX.Element {
         </div>
       )}
 
-      {/* Controls */}
-      <div className="chrome">
-        <div className="top">
-          <button className="round sm" onClick={exit} title="Zpět do knihovny (Esc)">
-            <Icon name="back" />
-          </button>
-          <div className="title">{doc.meta.title}</div>
-          <button
-            className="round sm"
-            onClick={() =>
-              document.fullscreenElement
-                ? void document.exitFullscreen()
-                : void document.documentElement.requestFullscreen()
-            }
-            title="Celá obrazovka (F)"
-          >
-            <Icon name="expand" />
-          </button>
-        </div>
-        {state.started && (
-          <div className="bottom" onClick={(e) => e.stopPropagation()}>
-            <div className="transport">
-              <button className="round sm" onClick={() => c.prevPage()} title="Předchozí strana (↑)">
-                <Icon name="prev" />
-              </button>
-              <button className="round" onClick={() => c.prev()} title="Předchozí replika (←)">
-                <Icon name="back" size={26} />
-              </button>
-              <button
-                className="round main"
-                onClick={() => c.toggle()}
-                title="Přehrát / pozastavit (mezerník)"
-              >
-                <Icon name={state.playing ? 'pause' : 'play'} size={34} />
-              </button>
-              <button className="round" onClick={() => c.next()} title="Další replika (→)">
-                <span style={{ transform: 'scaleX(-1)', display: 'grid' }}>
-                  <Icon name="back" size={26} />
-                </span>
-              </button>
-              <button className="round sm" onClick={() => c.nextPage()} title="Další strana (↓)">
-                <Icon name="next" />
-              </button>
-              <button
-                className={`round sm ${subtitles ? 'on' : ''}`}
-                style={{ position: 'absolute', right: 26 }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMenu((m) => !m)
-                }}
-                title="Nastavení přehrávání"
-              >
-                <Icon name="settings" />
-              </button>
-            </div>
-            <div
-              className="timeline"
-              onClick={(e) => {
-                const r = e.currentTarget.getBoundingClientRect()
-                c.goTo(Math.round(((e.clientX - r.left) / r.width) * (c.beats.length - 1)))
+      {/* Controls (the TV is driven by the remote instead) */}
+      {!tv && (
+        <div className="chrome">
+          <div className="top">
+            <button className="round sm" onClick={exit} title="Zpět do knihovny (Esc)">
+              <Icon name="back" />
+            </button>
+            <div className="title">{doc.meta.title}</div>
+            <button
+              className="round sm"
+              onClick={() => {
+                c.pause()
+                setTvDialog(true)
               }}
+              title="Přehrát na televizi (AirPlay)"
             >
-              <div className="track">
-                <div
-                  className="fill"
-                  style={{ width: `${(state.beat / Math.max(1, c.beats.length - 1)) * 100}%` }}
-                />
+              <Icon name="tv" />
+            </button>
+            <button
+              className="round sm"
+              onClick={() =>
+                document.fullscreenElement
+                  ? void document.exitFullscreen()
+                  : void document.documentElement.requestFullscreen()
+              }
+              title="Celá obrazovka (F)"
+            >
+              <Icon name="expand" />
+            </button>
+          </div>
+          {state.started && (
+            <div className="bottom" onClick={(e) => e.stopPropagation()}>
+              <div className="transport">
+                <button className="round sm" onClick={() => c.prevPage()} title="Předchozí strana (↑)">
+                  <Icon name="prev" />
+                </button>
+                <button className="round" onClick={() => c.prev()} title="Předchozí replika (←)">
+                  <Icon name="back" size={26} />
+                </button>
+                <button
+                  className="round main"
+                  onClick={() => c.toggle()}
+                  title="Přehrát / pozastavit (mezerník)"
+                >
+                  <Icon name={state.playing ? 'pause' : 'play'} size={34} />
+                </button>
+                <button className="round" onClick={() => c.next()} title="Další replika (→)">
+                  <span style={{ transform: 'scaleX(-1)', display: 'grid' }}>
+                    <Icon name="back" size={26} />
+                  </span>
+                </button>
+                <button className="round sm" onClick={() => c.nextPage()} title="Další strana (↓)">
+                  <Icon name="next" />
+                </button>
+                <button
+                  className={`round sm ${subtitles ? 'on' : ''}`}
+                  style={{ position: 'absolute', right: 26 }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setMenu((m) => !m)
+                  }}
+                  title="Nastavení přehrávání"
+                >
+                  <Icon name="settings" />
+                </button>
               </div>
-              {pageTicks.map((i) => (
-                <div
-                  key={i}
-                  className="tick"
-                  style={{ left: `${(i / Math.max(1, c.beats.length - 1)) * 100}%` }}
+              <div
+                className="timeline"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  c.goTo(Math.round(((e.clientX - r.left) / r.width) * (c.beats.length - 1)))
+                }}
+              >
+                <div className="track">
+                  <div
+                    className="fill"
+                    style={{ width: `${(state.beat / Math.max(1, c.beats.length - 1)) * 100}%` }}
+                  />
+                </div>
+                {pageTicks.map((i) => (
+                  <div
+                    key={i}
+                    className="tick"
+                    style={{ left: `${(i / Math.max(1, c.beats.length - 1)) * 100}%` }}
+                  />
+                ))}
+              </div>
+              <div className="info">
+                <span>
+                  Strana {page.index + 1} / {doc.pages.length}
+                  {beat && beat.panel >= 0 ? ` · okénko ${beat.panel + 1}` : ''}
+                </span>
+                <span className="row" style={{ gap: 14 }}>
+                  <span>
+                    <span className="kbd">mezerník</span> pauza
+                  </span>
+                  <span>
+                    <span className="kbd">← →</span> repliky
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+          {menu && liveSettings && (
+            <div className="popover" onClick={(e) => e.stopPropagation()}>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={liveSettings.subtitles}
+                  onChange={(e) => void updateSettings({ subtitles: e.target.checked })}
                 />
-              ))}
+                Titulky
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={liveSettings.wordHighlight}
+                  onChange={(e) => void updateSettings({ wordHighlight: e.target.checked })}
+                />
+                Zvýrazňovat slova
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={liveSettings.pageIntro}
+                  onChange={(e) => void updateSettings({ pageIntro: e.target.checked })}
+                />
+                Ukázat celou stránku
+              </label>
+              <label className="field">
+                <span>Přiblížení</span>
+                <Segmented
+                  value={liveSettings.zoom}
+                  onChange={(v) => void updateSettings({ zoom: v })}
+                  options={[
+                    { value: 'soft', label: 'Jemné' },
+                    { value: 'medium', label: 'Střední' },
+                    { value: 'strong', label: 'Výrazné' },
+                  ]}
+                />
+              </label>
+              <label className="field">
+                <span>Tempo</span>
+                <input
+                  type="range"
+                  min={0.6}
+                  max={1.8}
+                  step={0.1}
+                  value={liveSettings.pace}
+                  onChange={(e) => void updateSettings({ pace: Number(e.target.value) })}
+                />
+              </label>
             </div>
-            <div className="info">
-              <span>
-                Strana {page.index + 1} / {doc.pages.length}
-                {beat && beat.panel >= 0 ? ` · okénko ${beat.panel + 1}` : ''}
-              </span>
-              <span className="row" style={{ gap: 14 }}>
-                <span>
-                  <span className="kbd">mezerník</span> pauza
-                </span>
-                <span>
-                  <span className="kbd">← →</span> repliky
-                </span>
-              </span>
-            </div>
-          </div>
-        )}
-        {menu && liveSettings && (
-          <div className="popover" onClick={(e) => e.stopPropagation()}>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={liveSettings.subtitles}
-                onChange={(e) => void updateSettings({ subtitles: e.target.checked })}
-              />
-              Titulky
-            </label>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={liveSettings.wordHighlight}
-                onChange={(e) => void updateSettings({ wordHighlight: e.target.checked })}
-              />
-              Zvýrazňovat slova
-            </label>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={liveSettings.pageIntro}
-                onChange={(e) => void updateSettings({ pageIntro: e.target.checked })}
-              />
-              Ukázat celou stránku
-            </label>
-            <label className="field">
-              <span>Přiblížení</span>
-              <Segmented
-                value={liveSettings.zoom}
-                onChange={(v) => void updateSettings({ zoom: v })}
-                options={[
-                  { value: 'soft', label: 'Jemné' },
-                  { value: 'medium', label: 'Střední' },
-                  { value: 'strong', label: 'Výrazné' },
-                ]}
-              />
-            </label>
-            <label className="field">
-              <span>Tempo</span>
-              <input
-                type="range"
-                min={0.6}
-                max={1.8}
-                step={0.1}
-                value={liveSettings.pace}
-                onChange={(e) => void updateSettings({ pace: Number(e.target.value) })}
-              />
-            </label>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Start / end overlays */}
-      {!state.started && (
+      {!state.started && !tv && (
         <div className="overlay-center">
           <div className="panel-box">
             <div className="title-pill">{doc.meta.title}</div>
@@ -525,6 +639,11 @@ export function Player({ id }: { id: string }): React.JSX.Element {
             {lastBeat > 0 && lastBeat < c.beats.length - 1 && (
               <button className="btn big" onClick={() => c.start(lastBeat)}>
                 <Icon name="replay" /> Pokračovat od strany {(c.beats[lastBeat]?.page ?? 0) + 1}
+              </button>
+            )}
+            {c.beats.length > 0 && (
+              <button className="btn ghost" onClick={() => setTvDialog(true)}>
+                <Icon name="tv" /> Pustit na televizi
               </button>
             )}
             {c.beats.length === 0 && (
@@ -538,7 +657,7 @@ export function Player({ id }: { id: string }): React.JSX.Element {
           <div className="panel-box">
             <div style={{ fontSize: 64 }}>🍀🎉</div>
             <h2>Konec!</h2>
-            <div className="row">
+            <div className={`row ${tv ? 'hidden' : ''}`}>
               <button className="btn big primary" onClick={() => c.start(0)}>
                 <Icon name="replay" /> Znovu
               </button>
@@ -549,6 +668,37 @@ export function Player({ id }: { id: string }): React.JSX.Element {
           </div>
         </div>
       )}
+      {tvDialog && (
+        <TvDialog
+          comicId={doc.meta.id}
+          beat={state.started ? state.beat : lastBeat}
+          onClose={() => setTvDialog(false)}
+          onStarted={() => {
+            c.pause()
+            go({ name: 'remote', id: doc.meta.id })
+          }}
+          onMirror={() => {
+            setTvDialog(false)
+            void document.documentElement.requestFullscreen().catch(() => undefined)
+            if (!state.started) c.start(lastBeat > 0 && lastBeat < c.beats.length - 1 ? lastBeat : 0)
+            else c.resume()
+          }}
+        />
+      )}
     </div>
   )
+}
+
+/** Fields of the player state the remote cares about (changes → publish). */
+function tvStateKey(s: PlayerState): string {
+  return [
+    s.beat,
+    s.started,
+    s.playing,
+    s.ended,
+    s.loading,
+    s.camera.page,
+    s.line?.id ?? '',
+    s.speaker?.id ?? '',
+  ].join('|')
 }

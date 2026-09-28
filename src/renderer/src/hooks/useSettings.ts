@@ -18,6 +18,9 @@ export function loadSettings(): Promise<SettingsView> {
   return loading
 }
 
+// Changes made in another window (TV remote ↔ TV) arrive as events.
+api.settings.onChange((view) => emit(view))
+
 export async function updateSettings(patch: Partial<Settings>): Promise<SettingsView> {
   return emit(await api.settings.update(patch))
 }

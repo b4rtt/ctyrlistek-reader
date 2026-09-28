@@ -67,6 +67,8 @@ export class PlayerController {
   private elements = new Map<string, HTMLAudioElement>()
   private raf = 0
   private reportedError = false
+  /** Audio output device ('' = system default), e.g. an AirPlay TV. */
+  private sinkId = ''
 
   constructor(
     private doc: ComicDoc,
@@ -105,6 +107,25 @@ export class PlayerController {
   private set(patch: Partial<PlayerState>): void {
     this.state = { ...this.state, ...patch }
     for (const l of this.listeners) l(this.state)
+  }
+
+  /** Route voices and effects to another audio output (e.g. the TV). */
+  setOutput(deviceId: string): void {
+    this.sinkId = deviceId
+    for (const el of [this.audio, ...this.elements.values()]) {
+      if (el) void el.setSinkId(deviceId).catch(() => undefined)
+    }
+  }
+
+  get output(): string {
+    return this.sinkId
+  }
+
+  private makeAudio(url: string): HTMLAudioElement {
+    const el = new Audio(url)
+    el.preload = 'auto'
+    if (this.sinkId) void el.setSinkId(this.sinkId).catch(() => undefined)
+    return el
   }
 
   updateSettings(settings: Settings): void {
@@ -358,9 +379,7 @@ export class PlayerController {
       n++
       void this.request(line).then((ref) => {
         if (!ref || this.elements.has(line.id)) return
-        const el = new Audio(audioUrl(this.doc.meta.id, ref))
-        el.preload = 'auto'
-        this.elements.set(line.id, el)
+        this.elements.set(line.id, this.makeAudio(audioUrl(this.doc.meta.id, ref)))
       })
     }
   }
@@ -401,7 +420,7 @@ export class PlayerController {
     }
 
     let el = this.elements.get(line.id)
-    if (!el) el = new Audio(audioUrl(this.doc.meta.id, ref))
+    if (!el) el = this.makeAudio(audioUrl(this.doc.meta.id, ref))
     this.elements.delete(line.id)
     el.currentTime = 0
     el.volume = isSfx ? this.settings.sfxVolume : 1

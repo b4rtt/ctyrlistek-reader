@@ -270,6 +270,53 @@ export interface SfxRequest {
   priority?: 'high' | 'low'
 }
 
+// ---------------------------------------------------------------------- tv --
+
+/** A monitor the comic can be shown on (AirPlay TV, HDMI, …). */
+export interface DisplayInfo {
+  id: number
+  label: string
+  internal: boolean
+  primary: boolean
+  width: number
+  height: number
+}
+
+/** Remote → TV window. */
+export type TvCommand =
+  | { type: 'toggle' | 'pause' | 'next' | 'prev' | 'nextPage' | 'prevPage' | 'restart' }
+  | { type: 'goto'; beat: number }
+  | { type: 'output'; deviceId: string }
+
+export interface AudioOutput {
+  id: string
+  label: string
+}
+
+/** TV window → remote (published on every meaningful change). */
+export interface TvState {
+  comicId: string
+  title: string
+  display: string
+  beat: number
+  total: number
+  pageStarts: number[]
+  started: boolean
+  playing: boolean
+  ended: boolean
+  loading: boolean
+  page: number
+  pageCount: number
+  panel: number
+  /** Relative path of the current page thumbnail. */
+  thumb: string | null
+  text: string | null
+  speaker: string | null
+  color: string | null
+  outputs: AudioOutput[]
+  output: string
+}
+
 // --------------------------------------------------------------------- api --
 
 export interface AppApi {
@@ -279,6 +326,8 @@ export interface AppApi {
     update(patch: Partial<Settings>): Promise<SettingsView>
     setSecret(kind: SecretKind, value: string | null): Promise<SettingsView>
     test(kind: SecretKind): Promise<TestResult>
+    /** Settings changed in any window (e.g. from the TV remote). */
+    onChange(cb: (view: SettingsView) => void): () => void
   }
   library: {
     list(): Promise<ComicSummary[]>
@@ -295,6 +344,21 @@ export interface AppApi {
     analyzePage(req: AnalyzePageRequest): Promise<AnalyzePageResult>
     consolidate(req: ConsolidateRequest): Promise<ConsolidateResult>
     verifyPage(req: VerifyPageRequest): Promise<VerifyPageResult>
+  }
+  tv: {
+    displays(): Promise<DisplayInfo[]>
+    open(comicId: string, displayId: number, beat: number): Promise<void>
+    close(): Promise<void>
+    isOpen(): Promise<boolean>
+    /** Remote: send a command to the TV window. */
+    command(cmd: TvCommand): void
+    /** TV window: publish its playback state to the remote. */
+    publish(state: TvState): void
+    onCommand(cb: (cmd: TvCommand) => void): () => void
+    /** `null` = the TV window was closed. */
+    onState(cb: (state: TvState | null) => void): () => void
+    onDisplays(cb: (displays: DisplayInfo[]) => void): () => void
+    openDisplaySettings(): Promise<void>
   }
   voices: {
     listEleven(force?: boolean): Promise<VoiceInfo[]>

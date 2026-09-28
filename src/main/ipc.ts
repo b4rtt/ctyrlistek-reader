@@ -2,7 +2,7 @@
  * IPC handlers – the only entry points the renderer can reach. Channel names
  * mirror the `AppApi` shape (`library:list`, `voices:synthesize`, …).
  */
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import type {
   AnalyzePageRequest,
   ConsolidateRequest,
@@ -40,7 +40,10 @@ export function registerIpc(): void {
   handle('settings:get', () => settingsView())
   handle('settings:update', (patch: Partial<Settings>) => {
     updateSettings(patch)
-    return settingsView()
+    const view = settingsView()
+    // Keep every window (main + TV) in sync.
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send('settings:changed', view)
+    return view
   })
   handle('settings:setSecret', (kind: SecretKind, value: string | null) => {
     setSecret(kind, value)
