@@ -24,6 +24,7 @@ export function TvDialog({ comicId, beat, onClose, onStarted, onMirror }: Props)
   const toast = useToast()
   const [displays, setDisplays] = useState<DisplayInfo[] | null>(null)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const known = useRef<Set<number> | null>(null)
 
   const start = async (d: DisplayInfo): Promise<void> => {
@@ -40,23 +41,47 @@ export function TvDialog({ comicId, beat, onClose, onStarted, onMirror }: Props)
   startRef.current = start
 
   useEffect(() => {
-    void api.tv.displays().then((ds) => {
-      known.current = new Set(ds.map((d) => d.id))
-      setDisplays(ds)
-    })
-    return api.tv.onDisplays((ds) => {
+    // Never hang on the spinner: an old main process (app not restarted after
+    // an update) or any IPC failure falls back to the connection guide.
+    const timeout = setTimeout(() => {
+      setError('Aplikace neodpověděla. Zkuste ji prosím zavřít a znovu spustit.')
+      setDisplays((d) => d ?? [])
+    }, 4000)
+    Promise.resolve()
+      .then(() => api.tv.displays())
+      .then((ds) => {
+        known.current = new Set(ds.map((d) => d.id))
+        setDisplays(ds)
+      })
+      .catch((err) => {
+        setError(`Seznam monitorů se nepodařilo načíst (${errorMessage(err)}). Zkuste aplikaci restartovat.`)
+        setDisplays([])
+      })
+      .finally(() => clearTimeout(timeout))
+    if (!api.tv?.onDisplays) return () => clearTimeout(timeout)
+    const off = api.tv.onDisplays((ds) => {
       setDisplays(ds)
       // A TV was just connected while the guide was open → go.
       const added = ds.filter((d) => !d.internal && !known.current?.has(d.id))
       known.current = new Set(ds.map((d) => d.id))
       if (added.length === 1) void startRef.current(added[0])
     })
+    return () => {
+      clearTimeout(timeout)
+      off()
+    }
   }, [])
 
   const tvs = (displays ?? []).filter((d) => !d.internal)
 
   return (
     <Modal title="Přehrát na televizi" onClose={onClose} width={620}>
+      {error && (
+        <div className="banner danger">
+          <Icon name="warn" />
+          <span className="grow">{error}</span>
+        </div>
+      )}
       {displays === null ? (
         <div className="empty">
           <span className="spinner" style={{ display: 'inline-block' }} />

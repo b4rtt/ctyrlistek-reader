@@ -24,6 +24,8 @@ const app = await electron.launch({
     ...process.env,
     CTYRLISTEK_DATA_DIR: dataDir,
     CTYRLISTEK_MOCK_AI: '1',
+    // Treat the (single) test screen as a TV so the AirPlay flow can run.
+    CTYRLISTEK_TV_TEST: '1',
     OPENAI_API_KEY: '',
     ELEVENLABS_API_KEY: '',
   },
@@ -99,6 +101,30 @@ try {
     await win.waitForTimeout(300)
     const paused = await win.locator('.round.main').getAttribute('title')
     if (!paused) throw new Error('transport missing')
+  })
+
+  await step('play on TV (remote control)', async () => {
+    await win.getByTitle('Přehrát na televizi (AirPlay)').click()
+    const tvWindow = app.waitForEvent('window')
+    await win.locator('.tv-choice').first().click()
+    const tv = await tvWindow
+    tv.on('pageerror', (e) => errors.push('[tv] ' + String(e)))
+    tv.on('console', (m) => m.type() === 'error' && errors.push('[tv] ' + m.text()))
+    await win.getByText('Ukončit přehrávání na televizi').waitFor({ timeout: 15000 })
+    // The TV plays on its own and reports its state to the remote.
+    await win.locator('.remote-now .small', { hasText: 'Strana' }).waitFor({ timeout: 20000 })
+    await tv.locator('.subtitle:not(.off)').waitFor({ timeout: 20000 })
+    await tv.screenshot({ path: join(shots, '10-tv.png') })
+    await win.screenshot({ path: join(shots, '11-remote.png') })
+    // Remote commands reach the TV.
+    await win.locator('.remote-transport .round.main').click()
+    await tv.waitForTimeout(600)
+    const playing = await win.locator('.remote-transport .round.main').getAttribute('title')
+    if (!playing) throw new Error('remote transport missing')
+    await win.getByRole('button', { name: /Pokračovat na počítači/ }).click()
+    await win.locator('.start-btn').waitFor({ timeout: 15000 })
+    await tv.waitForEvent('close', { timeout: 5000 }).catch(() => undefined)
+    if (app.windows().length !== 1) throw new Error('TV window did not close')
   })
 } finally {
   await app.close()
