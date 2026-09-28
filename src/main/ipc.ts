@@ -10,10 +10,11 @@ import type {
   Settings,
   SfxRequest,
   SynthesizeRequest,
+  VerifyPageRequest,
 } from '@shared/api'
 import type { ComicDoc } from '@shared/types'
-import { analyzePageMock, consolidateMock } from './ai/mock'
-import { analyzePageOpenAI, consolidateOpenAI, testOpenAI } from './ai/openai'
+import { analyzePageMock, consolidateMock, verifyPageMock } from './ai/mock'
+import { analyzePageOpenAI, consolidateOpenAI, testOpenAI, verifyPageOpenAI } from './ai/openai'
 import * as library from './library'
 import { getSettings, isMockAi, setSecret, settingsView, updateSettings } from './settings'
 import { generateSfx, synthesizeLine } from './tts/audio'
@@ -61,6 +62,9 @@ export function registerIpc(): void {
 
   handle('ai:analyzePage', (req: AnalyzePageRequest) =>
     isMockAi() ? analyzePageMock(req) : analyzePageOpenAI(req),
+  )
+  handle('ai:verifyPage', (req: VerifyPageRequest) =>
+    isMockAi() ? verifyPageMock(req) : verifyPageOpenAI(req),
   )
   handle('ai:consolidate', (req: ConsolidateRequest) =>
     isMockAi() ? consolidateMock(req) : consolidateOpenAI(req),

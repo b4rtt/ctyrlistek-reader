@@ -28,6 +28,7 @@ const api: AppApi = {
   ai: {
     analyzePage: invoke('ai:analyzePage'),
     consolidate: invoke('ai:consolidate'),
+    verifyPage: invoke('ai:verifyPage'),
   },
   voices: {
     listEleven: invoke('voices:listEleven'),

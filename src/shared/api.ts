@@ -23,6 +23,7 @@ import type {
 // ---------------------------------------------------------------- settings --
 
 export type VoiceMode = 'elevenlabs' | 'system'
+export type ZoomLevel = 'soft' | 'medium' | 'strong'
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high'
 
 export interface Settings {
@@ -31,6 +32,8 @@ export interface Settings {
   openaiEffort: ReasoningEffort
   /** How many pages are analysed in parallel. */
   analysisConcurrency: number
+  /** Second AI pass that proofreads speakers and reading order per page. */
+  verifyPass: boolean
 
   voiceMode: VoiceMode
   elevenModel: string
@@ -48,6 +51,8 @@ export interface Settings {
   pace: number
   /** Show the whole page briefly before zooming into the first panel. */
   pageIntro: boolean
+  /** How close the camera gets to a panel. */
+  zoom: ZoomLevel
   /** Volume of sound effects relative to speech (0..1). */
   sfxVolume: number
 }
@@ -146,6 +151,32 @@ export interface AnalyzePageResult {
   notes: string
   usage: TokenUsage
   model: string
+}
+
+export interface VerifyLine {
+  /** Number drawn next to the balloon (1-based, current reading order). */
+  n: number
+  /** 1-based panel number (as drawn, "P1"…). */
+  panel: number
+  kind: LineKind
+  speaker: string
+  text: string
+}
+
+export interface VerifyPageRequest {
+  comicId: string
+  title: string
+  pageIndex: number
+  /** Page with panels and numbered balloons drawn on it. */
+  image: EncodedImage
+  lines: VerifyLine[]
+  cast: RosterEntry[]
+}
+
+export interface VerifyPageResult {
+  panels: { panel: number; lines: { n: number; speaker: string; drop: boolean }[] }[]
+  changes: string
+  usage: TokenUsage
 }
 
 export interface ConsolidateCharacter {
@@ -263,6 +294,7 @@ export interface AppApi {
   ai: {
     analyzePage(req: AnalyzePageRequest): Promise<AnalyzePageResult>
     consolidate(req: ConsolidateRequest): Promise<ConsolidateResult>
+    verifyPage(req: VerifyPageRequest): Promise<VerifyPageResult>
   }
   voices: {
     listEleven(force?: boolean): Promise<VoiceInfo[]>

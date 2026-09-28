@@ -149,6 +149,14 @@ export function SettingsDialog({
             />
           </label>
         </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={s.verifyPass}
+            onChange={(e) => set({ verifyPass: e.target.checked })}
+          />
+          Druhá kontrola mluvčích a pořadí bublin (přesnější, asi o třetinu dražší)
+        </label>
         <label className="field">
           <span>Paralelně analyzovaných stránek: {s.analysisConcurrency}</span>
           <input
@@ -275,6 +283,18 @@ export function SettingsDialog({
             onChange={(e) => set({ pageIntro: e.target.checked })}
           />
           Na začátku každé stránky ukázat celou stránku
+        </label>
+        <label className="field">
+          <span>Přiblížení okének</span>
+          <Segmented
+            value={s.zoom}
+            onChange={(v) => set({ zoom: v })}
+            options={[
+              { value: 'soft', label: 'Jemné' },
+              { value: 'medium', label: 'Střední' },
+              { value: 'strong', label: 'Výrazné' },
+            ]}
+          />
         </label>
         <label className="field">
           <span>Tempo mezi replikami: {s.pace < 0.9 ? 'rychlé' : s.pace > 1.2 ? 'pomalé' : 'normální'}</span>

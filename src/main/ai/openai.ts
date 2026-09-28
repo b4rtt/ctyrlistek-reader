@@ -7,6 +7,8 @@ import type {
   AnalyzePageResult,
   ConsolidateRequest,
   ConsolidateResult,
+  VerifyPageRequest,
+  VerifyPageResult,
   TestResult,
 } from '@shared/api'
 import { ERROR_CODES } from '@shared/api'
@@ -18,8 +20,11 @@ import {
   CONSOLIDATE_SYSTEM_PROMPT,
   PAGE_SCHEMA,
   PAGE_SYSTEM_PROMPT,
+  VERIFY_SCHEMA,
+  VERIFY_SYSTEM_PROMPT,
   consolidateUserText,
   pageUserText,
+  verifyUserText,
 } from './prompts'
 
 let client: OpenAI | null = null
@@ -205,6 +210,22 @@ export async function consolidateOpenAI(req: ConsolidateRequest): Promise<Consol
       })),
     usage,
   }
+}
+
+// ------------------------------------------------------------------ verify --
+
+export async function verifyPageOpenAI(req: VerifyPageRequest): Promise<VerifyPageResult> {
+  const { data, usage } = await structured<Omit<VerifyPageResult, 'usage'>>({
+    instructions: VERIFY_SYSTEM_PROMPT,
+    content: [
+      { type: 'input_text', text: verifyUserText(req) },
+      { type: 'input_image', image_url: dataUrl(req.image.data), detail: 'high' },
+    ],
+    schemaName: 'page_proofread',
+    schema: VERIFY_SCHEMA as unknown as Record<string, unknown>,
+    maxOutputTokens: 16000,
+  })
+  return { ...data, usage }
 }
 
 export async function testOpenAI(): Promise<TestResult> {

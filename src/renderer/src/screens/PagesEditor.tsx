@@ -10,6 +10,7 @@ import { playPreview, speakWeb } from '../audio/preview'
 import { Icon } from '../components/Icon'
 import { Portrait } from '../components/Portrait'
 import { useToast } from '../components/ui'
+import { useNav } from '../App'
 import { getJob, resumeImport } from '../pipeline/importJob'
 import { speakerOf, synthesizeLine } from '../pipeline/voices'
 
@@ -37,6 +38,7 @@ function move<T>(arr: T[], from: number, to: number): T[] {
 
 export function PagesEditor({ doc, settings, update, reload, flush }: Props): React.JSX.Element {
   const toast = useToast()
+  const { go } = useNav()
   const [pageIndex, setPageIndex] = useState(() =>
     Math.max(
       0,
@@ -116,6 +118,26 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
       toast(errorMessage(err), 'error')
     } finally {
       setReanalyzing(false)
+    }
+  }
+
+  /** Re-read every page (e.g. after an app update improved the analysis). */
+  const reanalyzeAll = async (): Promise<void> => {
+    if (
+      !confirm(
+        'Nechat AI znovu přečíst celý komiks? Ruční úpravy textů a pořadí se přepíšou; postavy a hlasy zůstanou.',
+      )
+    )
+      return
+    try {
+      await flush()
+      await resumeImport(
+        doc.meta.id,
+        doc.pages.map((p) => p.index),
+      )
+      go({ name: 'processing', id: doc.meta.id })
+    } catch (err) {
+      toast(errorMessage(err), 'error')
     }
   }
 
@@ -226,6 +248,14 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
             <div className="grow" />
             <button className="btn small" onClick={() => void reanalyze()} disabled={busy}>
               {reanalyzing ? <span className="spinner" /> : <Icon name="refresh" size={16} />} Přečíst znovu
+            </button>
+            <button
+              className="btn small ghost"
+              onClick={() => void reanalyzeAll()}
+              disabled={busy}
+              title="Znovu přečíst všechny strany"
+            >
+              Celý komiks
             </button>
           </div>
         </div>

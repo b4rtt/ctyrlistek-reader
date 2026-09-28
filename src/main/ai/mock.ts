@@ -13,6 +13,8 @@ import type {
   AnalyzePageResult,
   ConsolidateRequest,
   ConsolidateResult,
+  VerifyPageRequest,
+  VerifyPageResult,
 } from '@shared/api'
 import type { Delivery, Emotion, Intensity } from '@shared/types'
 
@@ -174,4 +176,17 @@ export async function analyzePageMock(req: AnalyzePageRequest): Promise<AnalyzeP
 export async function consolidateMock(_req: ConsolidateRequest): Promise<ConsolidateResult> {
   await sleep(200)
   return { merges: [], updates: [], usage: { inputTokens: 0, outputTokens: 0 } }
+}
+
+/** Mock proofreading keeps everything as it is. */
+export async function verifyPageMock(req: VerifyPageRequest): Promise<VerifyPageResult> {
+  await sleep(100)
+  const panels = new Map<number, { n: number; speaker: string; drop: boolean }[]>()
+  for (const l of req.lines)
+    panels.set(l.panel, [...(panels.get(l.panel) ?? []), { n: l.n, speaker: l.speaker, drop: false }])
+  return {
+    panels: [...panels].map(([panel, lines]) => ({ panel, lines })),
+    changes: '',
+    usage: { inputTokens: 0, outputTokens: 0 },
+  }
 }

@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: Settings = {
   openaiModel: 'gpt-6-sol',
   openaiEffort: 'medium',
   analysisConcurrency: 3,
+  verifyPass: true,
 
   voiceMode: 'elevenlabs',
   elevenModel: 'eleven_v3',
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wordHighlight: true,
   pace: 1,
   pageIntro: true,
+  zoom: 'medium',
   sfxVolume: 0.7,
 }
 

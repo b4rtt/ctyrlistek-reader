@@ -212,3 +212,90 @@ describe('invalidateChangedVoices', () => {
     expect(out.pages[0].panels[0].lines.map((l) => l.audio)).toEqual([null, audio])
   })
 })
+
+describe('proofreading (applyVerification)', () => {
+  async function setup() {
+    const { applyVerification, verifyLines } = await import('../../src/shared/roster')
+    const doc = makeDoc()
+    applyPageResult(
+      doc,
+      0,
+      result(
+        [
+          { label: null, rect: R, lines: [aiLine('bobik', 'Odpověď.'), aiLine('pinda', 'Otázka?')] },
+          {
+            label: null,
+            rect: R,
+            lines: [aiLine('narrator', 'Cedule', { kind: 'narration' }), aiLine('fifinka', 'Ahoj')],
+          },
+        ],
+        [],
+      ),
+      { candidates: [] },
+    )
+    return { doc, applyVerification, verifyLines }
+  }
+  const usage = { inputTokens: 0, outputTokens: 0 }
+
+  it('numbers lines in reading order', async () => {
+    const { doc, verifyLines } = await setup()
+    expect(verifyLines(doc, 0).map((l) => [l.n, l.panel, l.speaker])).toEqual([
+      [1, 1, 'bobik'],
+      [2, 1, 'pinda'],
+      [3, 2, 'narrator'],
+      [4, 2, 'fifinka'],
+    ])
+  })
+
+  it('reorders, fixes speakers and drops duplicates', async () => {
+    const { doc, applyVerification } = await setup()
+    const changed = applyVerification(doc, 0, {
+      panels: [
+        {
+          panel: 1,
+          lines: [
+            { n: 2, speaker: 'pinda', drop: false },
+            { n: 1, speaker: 'myspulin', drop: false },
+          ],
+        },
+        {
+          panel: 2,
+          lines: [
+            { n: 3, speaker: 'narrator', drop: true },
+            { n: 4, speaker: 'fifinka', drop: false },
+          ],
+        },
+      ],
+      changes: '',
+      usage,
+    })
+    const p = doc.pages[0].panels
+    expect(p[0].lines.map((l) => [l.text, l.speakerId])).toEqual([
+      ['Otázka?', 'pinda'],
+      ['Odpověď.', 'myspulin'],
+    ])
+    expect(p[1].lines.map((l) => l.text)).toEqual(['Ahoj'])
+    expect(changed).toBe(3)
+  })
+
+  it('ignores inconsistent answers instead of losing lines', async () => {
+    const { doc, applyVerification } = await setup()
+    applyVerification(doc, 0, {
+      panels: [
+        { panel: 1, lines: [{ n: 1, speaker: 'bobik', drop: false }] }, // line 2 missing
+        {
+          panel: 2,
+          lines: [
+            { n: 4, speaker: 'nobody', drop: false },
+            { n: 3, speaker: 'narrator', drop: false },
+            { n: 1, speaker: 'x', drop: false },
+          ],
+        },
+      ],
+      changes: '',
+      usage,
+    })
+    expect(doc.pages[0].panels.map((p) => p.lines.length)).toEqual([2, 2])
+    expect(doc.pages[0].panels[0].lines[0].text).toBe('Odpověď.')
+  })
+})

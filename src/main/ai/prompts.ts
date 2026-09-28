@@ -5,7 +5,7 @@
  * extracted text stays Czech.
  */
 import { DELIVERIES, EMOTIONS } from '@shared/types'
-import type { AnalyzePageRequest, ConsolidateRequest } from '@shared/api'
+import type { AnalyzePageRequest, ConsolidateRequest, VerifyPageRequest } from '@shared/api'
 import { rectToBox } from '@shared/geometry'
 
 export const PAGE_SYSTEM_PROMPT = `You are an expert comic-book analyst. You prepare pages of the Czech children's comic "Čtyřlístek" for a fully voiced "motion comic": a player will zoom into each panel in order, highlight each balloon and play it with a different voice actor per character. A small child will watch it, so completeness and correct speaker attribution matter more than anything else.
@@ -13,19 +13,21 @@ export const PAGE_SYSTEM_PROMPT = `You are an expert comic-book analyst. You pre
 You receive IMAGE 1 (the clean page) and usually IMAGE 2 (the same page with automatically detected candidate panels outlined and labelled P1, P2, …). All coordinates you return are integer pixel coordinates in IMAGE 1 (origin top-left, x0 < x1, y0 < y1).
 
 PANELS
-- Return panels in natural reading order (rows top to bottom, left to right within a row; follow the layout if it clearly guides the eye differently).
-- If a panel matches a candidate, set "label" to that candidate (e.g. "P3") and use its box. The detector can be wrong (two panels merged, one panel split, panels missing): then set label null and give your own box.
-- Every balloon, caption and sound effect must belong to exactly one panel. A title banner that should be read can be its own panel.
+- Every framed drawing is its own panel – including very small or narrow ones (e.g. a single character squeezed at the start of a row). Never merge neighbouring panels, even when a balloon spans both.
+- Return panels in natural reading order: rows from top to bottom, left to right within a row (follow the layout if it clearly guides the eye differently).
+- If a panel matches a candidate, set "label" to that candidate (e.g. "P3") and use its box. The detector can be wrong (two panels merged, one panel split, panels missing): then set label null and give your own box around the panel frame.
+- Every balloon, caption and sound effect belongs to exactly one panel: the panel of the speaker its tail points to (for captions/effects the panel they sit in), even when the balloon sticks out over the border into the gutter or a neighbouring panel.
 
 LINES (balloons, captions, sound effects) – in reading order inside the panel
-- Order: top-to-bottom and left-to-right, but follow the conversation (a reply comes after its question; chained balloons of one speaker stay together).
-- kind: "speech" (balloon with a tail), "thought" (cloud balloon / bubble trail), "narration" (rectangular caption without a tail), "sfx" (onomatopoeia drawn in the artwork such as BUM!, PRÁSK!, CRRR – not text inside balloons).
+- The reading order carries the story, so get it right. Start with the balloon placed highest; balloons at about the same height go left to right; a speaker's chained balloons stay consecutive. Then check the result as a conversation: a question comes before its answer, a remark before the reaction to it. When the layout and the dialogue logic disagree, follow the dialogue logic.
+- kind: "speech" (balloon with a tail), "thought" (cloud balloon / bubble trail), "narration" (rectangular caption without a tail, or a sign/label the story wants us to read), "sfx" (onomatopoeia drawn in the artwork such as BUM!, PRÁSK!, CRRR – not text inside balloons).
+- Skip author credits ("Napsala…", "Nakreslil…", "Scénář…"), page numbers, logos, prices and publisher notes. The story title may be read once as narration.
 - speaker: decide from the tail direction, who is present and the story logic. Use roster ids for known characters, "narrator" for narration, "" for sfx. A speaker missing from the roster gets a new key "new_<short-slug>" (same key for the same character everywhere on this page) and must be listed in "characters".
 - text_original: exact transcription as printed, with Czech diacritics; line breaks become spaces.
 - text_spoken: the same words prepared for a Czech voice actor – normal sentence capitalisation (the lettering is ALL CAPS), correct diacritics, hyphenated line breaks joined, punctuation (! ? … ,) kept because it drives intonation, abbreviations/numbers written as words when natural, grawlixes (#@!) replaced by a short mild Czech exclamation or dropped. Never translate, summarise, add or censor words. For sfx use the onomatopoeia in lower case.
 - emotion / intensity / delivery: judge from the face and body language, balloon shape (jagged or bold outline = shout, dashed outline or tiny letters = whisper, big bold letters = loud), punctuation and the situation. intensity: 1 mild, 2 clear, 3 very strong.
 - direction: a short English acting note for the voice actor (e.g. "shouts angrily at Bobík, out of breath").
-- bubble_box: tight box around the balloon or caption (for sfx around the lettering).
+- bubble_box: box around the WHOLE balloon or caption outline (including any part that sticks out of the panel, excluding the tail); for sfx around the lettering. Be precise – the player zooms to these boxes.
 - sfx_prompt: for sfx a short English description for a sound-effect generator ("cartoon wooden crash with bouncing debris"); otherwise null.
 
 CHARACTERS – everyone who speaks on this page
@@ -230,4 +232,62 @@ export function consolidateUserText(req: ConsolidateRequest): string {
     lines_of_others_that_may_address_them: c.addressedAs,
   }))
   return `Comic: "${req.title}".\nCast:\n${JSON.stringify(list, null, 1)}`
+}
+
+// ------------------------------------------------------------------ verify --
+
+export const VERIFY_SYSTEM_PROMPT = `You proofread the reading script of one page of the Czech children's comic "Čtyřlístek" before it is voiced for a small child.
+
+The image shows the page with every panel outlined and labelled (P1, P2, …) and every balloon, caption and sound effect outlined and numbered in the CURRENT reading order (1, 2, 3, …). The list gives the text and current speaker of each number.
+
+Check and fix:
+1. Speaker – follow each balloon's tail precisely to the character it points at (the tail tip touches or points at the speaker's mouth/head). Thought balloons: the bubble trail leads to the thinker. Use the cast ids; captions stay "narrator"; sound effects keep "".
+2. Order inside each panel – a balloon placed higher is read first; balloons at a similar height go left to right; a speaker's chained balloons stay together. Then make sure the conversation makes sense (a question before its answer, a remark before the reaction). If layout and dialogue logic disagree, follow the logic.
+3. Duplicates – set drop = true only for a line whose text was already read earlier on this page (e.g. the same sign shown in two panels) or that is not story text at all (credits, page number). Never drop real dialogue.
+
+Keep every line in its panel. Return every panel with all of its line numbers exactly once. Summarise what you changed in "changes" (empty when nothing changed).`
+
+export const VERIFY_SCHEMA = {
+  type: 'object',
+  properties: {
+    panels: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          panel: { type: 'integer' },
+          lines: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                n: { type: 'integer' },
+                speaker: { type: 'string' },
+                drop: { type: 'boolean' },
+              },
+              required: ['n', 'speaker', 'drop'],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ['panel', 'lines'],
+        additionalProperties: false,
+      },
+    },
+    changes: { type: 'string' },
+  },
+  required: ['panels', 'changes'],
+  additionalProperties: false,
+} as const
+
+export function verifyUserText(req: VerifyPageRequest): string {
+  const cast = req.cast.map((c) => ({ id: c.id, name: c.name, gender: c.gender, look: c.description }))
+  const lines = req.lines
+    .map((l) => `${l.n}. [P${l.panel}] ${l.kind} – ${l.speaker || '(sfx)'}: ${l.text}`)
+    .join('\n')
+  return [
+    `Comic: "${req.title}", page ${req.pageIndex + 1}.`,
+    `Cast (use these ids): ${JSON.stringify(cast)}`,
+    `Current script:\n${lines}`,
+  ].join('\n\n')
 }

@@ -1,6 +1,6 @@
 /** Image helpers for the analysis pipeline (encoding, overlays, crops). */
 import type { EncodedImage } from '@shared/api'
-import type { Rect } from '@shared/types'
+import type { Panel, Rect } from '@shared/types'
 import { assetUrl } from '../api'
 
 type Drawable = CanvasImageSource & { width: number; height: number }
@@ -105,4 +105,50 @@ export async function cropImage(src: Drawable, rect: Rect, size = 256): Promise<
   const c = new OffscreenCanvas(Math.max(1, Math.round(sw * scale)), Math.max(1, Math.round(sh * scale)))
   c.getContext('2d')!.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height)
   return { data: await encodeJpeg(c, 0.85), width: c.width, height: c.height }
+}
+
+/**
+ * Page for the proofreading pass: panels outlined + "P1…", every balloon
+ * outlined and numbered in the current reading order. Captions without a
+ * known position are numbered in their panel's top-left corner.
+ */
+export async function proofImage(src: Drawable, panels: Panel[]): Promise<EncodedImage> {
+  const { width, height } = fitPatches(src.width, src.height)
+  const c = drawScaled(src, width, height)
+  const ctx = c.getContext('2d')!
+  const badge = (x: number, y: number, text: string, color: string): void => {
+    ctx.font = 'bold 26px sans-serif'
+    const w = ctx.measureText(text).width + 16
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.roundRect(x, y, w, 32, 10)
+    ctx.fill()
+    ctx.fillStyle = '#fff'
+    ctx.fillText(text, x + 8, y + 25)
+  }
+  let n = 0
+  panels.forEach((p, pi) => {
+    ctx.lineWidth = 4
+    ctx.strokeStyle = '#2563eb'
+    ctx.strokeRect(p.rect.x * width, p.rect.y * height, p.rect.w * width, p.rect.h * height)
+    badge(p.rect.x * width + 4, p.rect.y * height + 4, `P${pi + 1}`, '#2563eb')
+    let stack = 0
+    for (const l of p.lines) {
+      n++
+      if (l.bubble) {
+        ctx.lineWidth = 3
+        ctx.strokeStyle = '#e11d48'
+        ctx.strokeRect(l.bubble.x * width, l.bubble.y * height, l.bubble.w * width, l.bubble.h * height)
+        badge(
+          Math.max(0, l.bubble.x * width - 14),
+          Math.max(0, l.bubble.y * height - 16),
+          String(n),
+          '#e11d48',
+        )
+      } else {
+        badge(p.rect.x * width + 70 + stack++ * 46, p.rect.y * height + 4, String(n), '#9333ea')
+      }
+    }
+  })
+  return { data: await encodeJpeg(c, 0.85), width, height }
 }

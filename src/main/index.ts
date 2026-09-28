@@ -1,6 +1,9 @@
 import { BrowserWindow, app, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
+import { testOpenAI } from './ai/openai'
 import { registerIpc } from './ipc'
+import { settingsView } from './settings'
+import { testEleven } from './tts/elevenlabs'
 import { dataDir } from './paths'
 import { registerProtocols, registerSchemesAsPrivileged } from './protocol'
 
@@ -58,7 +61,24 @@ function createWindow(): BrowserWindow {
   return win
 }
 
+/**
+ * `CTYRLISTEK_SELFTEST=1`: verify the stored API keys against both services,
+ * print the result (never the keys) and quit. Handy for support/debugging.
+ */
+async function selfTest(): Promise<void> {
+  const view = settingsView()
+  console.log(`[selftest] keys: openai=${view.openaiKey ?? 'missing'} elevenlabs=${view.elevenKey ?? 'missing'}`)
+  const [openai, eleven] = await Promise.all([testOpenAI(), testEleven()])
+  console.log(`[selftest] openai: ${openai.ok ? 'OK' : 'FAIL'} – ${openai.message}`)
+  console.log(`[selftest] elevenlabs: ${eleven.ok ? 'OK' : 'FAIL'} – ${eleven.message}`)
+  app.quit()
+}
+
 app.whenReady().then(() => {
+  if (process.env.CTYRLISTEK_SELFTEST === '1') {
+    void selfTest()
+    return
+  }
   nativeTheme.themeSource = 'dark'
   registerProtocols(join(__dirname, '../renderer'))
   registerIpc()

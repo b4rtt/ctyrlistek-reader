@@ -7,15 +7,22 @@
  * Progress is persisted after every page, so an interrupted import can be
  * resumed later from the library.
  */
-import type { ConsolidateCharacter, TokenUsage } from '@shared/api'
-import { applyConsolidation, applyPageResult, pruneCharacters, toRosterEntries } from '@shared/roster'
+import type { ConsolidateCharacter, SettingsView, TokenUsage } from '@shared/api'
+import {
+  applyConsolidation,
+  applyPageResult,
+  applyVerification,
+  pruneCharacters,
+  toRosterEntries,
+  verifyLines,
+} from '@shared/roster'
 import type { ComicDoc, PageData } from '@shared/types'
 import { api, errorCode, errorMessage } from '../api'
 import { refineBubble } from '../cv/bubbles'
 import { detectPanels } from '../cv/panels'
 import { rasterize } from '../cv/raster'
 import { openPdf, renderPage } from '../pdf/render'
-import { aiImage, cropImage, encodeJpeg, loadPageBitmap, overlayImage, scaled } from './images'
+import { aiImage, cropImage, encodeJpeg, loadPageBitmap, overlayImage, proofImage, scaled } from './images'
 
 export type JobPhase = 'rendering' | 'analyzing' | 'consolidating' | 'done' | 'error' | 'cancelled'
 
@@ -42,6 +49,7 @@ export class ImportJob {
   private listeners = new Set<Listener>()
   private cancelled = false
   private saving: Promise<unknown> = Promise.resolve()
+  private settings: SettingsView | null = null
 
   constructor(
     private doc: ComicDoc,
@@ -206,6 +214,7 @@ export class ImportJob {
     this.doc.meta = { ...this.doc.meta, stage: this.doc.meta.stage === 'ready' ? 'ready' : 'analyzing' }
 
     const settings = await api.settings.get()
+    this.settings = settings
     const workers = Math.max(1, Math.min(settings.analysisConcurrency, queue.length))
     const next = (): number | undefined => (this.cancelled || this.state.error ? undefined : queue.shift())
     await Promise.all(
@@ -252,10 +261,15 @@ export class ImportJob {
         roster: toRosterEntries(this.doc.characters),
       })
       if (this.cancelled) return
-      applyPageResult(this.doc, index, result, { candidates, refineBubble: (r) => refineBubble(raster, r) })
+      applyPageResult(this.doc, index, result, {
+        candidates,
+        refineBubble: (r, panels) => refineBubble(raster, r, panels),
+      })
+      const verified = this.settings?.verifyPass ? await this.proofread(index, bitmap) : null
       const usage = {
-        inputTokens: this.state.usage.inputTokens + result.usage.inputTokens,
-        outputTokens: this.state.usage.outputTokens + result.usage.outputTokens,
+        inputTokens: this.state.usage.inputTokens + result.usage.inputTokens + (verified?.inputTokens ?? 0),
+        outputTokens:
+          this.state.usage.outputTokens + result.usage.outputTokens + (verified?.outputTokens ?? 0),
       }
       this.doc.meta = {
         ...this.doc.meta,
@@ -273,6 +287,33 @@ export class ImportJob {
       bitmap?.close()
       this.set({ active: this.state.active.filter((i) => i !== index) })
       await this.save()
+    }
+  }
+
+  /**
+   * Second pass: show the AI the page with numbered balloons and let it fix
+   * speakers, reading order and duplicates. Failures are not fatal.
+   */
+  private async proofread(index: number, bitmap: ImageBitmap): Promise<TokenUsage | null> {
+    const lines = verifyLines(this.doc, index)
+    if (lines.length < 2 || this.cancelled) return null
+    try {
+      const page = this.doc.pages[index]
+      const res = await api.ai.verifyPage({
+        comicId: this.doc.meta.id,
+        title: this.doc.meta.title,
+        pageIndex: index,
+        image: await proofImage(bitmap, page.panels),
+        lines,
+        cast: toRosterEntries(this.doc.characters),
+      })
+      if (this.cancelled) return null
+      const changed = applyVerification(this.doc, index, res)
+      if (changed) console.info(`Page ${index + 1}: proofreading changed ${changed} line(s). ${res.changes}`)
+      return res.usage
+    } catch (err) {
+      console.warn(`Proofreading of page ${index + 1} failed:`, errorMessage(err))
+      return null
     }
   }
 

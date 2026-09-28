@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { convertPage, type RawPage } from '../../src/main/ai/convert'
-import { CONSOLIDATE_SCHEMA, PAGE_SCHEMA, pageUserText } from '../../src/main/ai/prompts'
+import { CONSOLIDATE_SCHEMA, PAGE_SCHEMA, VERIFY_SCHEMA, pageUserText } from '../../src/main/ai/prompts'
 import { toVoiceInfo } from '../../src/main/tts/voiceInfo'
 import { decodeWav, encodeWav, pitchShift, trimSilence } from '../../src/main/tts/wav'
 
@@ -23,6 +23,7 @@ describe('OpenAI schemas', () => {
   it('are valid for strict structured outputs', () => {
     assertStrict(PAGE_SCHEMA)
     assertStrict(CONSOLIDATE_SCHEMA)
+    assertStrict(VERIFY_SCHEMA)
   })
 
   it('describe candidates in image pixel coordinates', () => {

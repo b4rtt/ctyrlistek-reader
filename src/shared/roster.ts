@@ -2,7 +2,14 @@
  * Merging per-page AI results into the comic document: stable character ids
  * across pages, panel/line construction and review flags.
  */
-import type { AiCharacter, AnalyzePageResult, ConsolidateResult, RosterEntry } from './api'
+import type {
+  AiCharacter,
+  AnalyzePageResult,
+  ConsolidateResult,
+  RosterEntry,
+  VerifyLine,
+  VerifyPageResult,
+} from './api'
 import { CHARACTER_COLORS, NARRATOR_ID, defaultVoice } from './defaults'
 import { area, iou } from './geometry'
 import type { Character, ComicDoc, Line, Panel, Rect } from './types'
@@ -183,7 +190,7 @@ export function choosePanelRect(
 export interface ApplyOptions {
   candidates: { label: string; rect: Rect }[]
   /** Optional precise bubble refinement (local image analysis). */
-  refineBubble?: (approx: Rect) => Rect
+  refineBubble?: (approx: Rect, panels: Rect[]) => Rect
 }
 
 /** Write one page's AI result into the document. Mutates and returns `doc`. */
@@ -223,8 +230,10 @@ export function applyPageResult(
     return 'neznamy'
   }
 
+  const panelRects = result.panels.map((p) => choosePanelRect(p.rect, p.label, opts.candidates))
+  const allPanels = [...panelRects, ...opts.candidates.map((c) => c.rect)]
   const panels: Panel[] = result.panels.map((p, pi) => {
-    const rect = choosePanelRect(p.rect, p.label, opts.candidates)
+    const rect = panelRects[pi]
     const lines: Line[] = p.lines
       .filter((l) => l.textSpoken.trim() || l.kind === 'sfx')
       .map((l, li) => {
@@ -234,7 +243,7 @@ export function applyPageResult(
           speakerId =
             idMap.get(l.speaker) ??
             (doc.characters.some((c) => c.id === l.speaker) ? l.speaker : unknownFallback())
-        const bubble = l.bubble && opts.refineBubble ? opts.refineBubble(l.bubble) : l.bubble
+        const bubble = l.bubble && opts.refineBubble ? opts.refineBubble(l.bubble, allPanels) : l.bubble
         return {
           id: `p${pageIndex}-${pi}-${li}-${Math.random().toString(36).slice(2, 7)}`,
           kind: l.kind,
@@ -362,4 +371,75 @@ export function invalidateChangedVoices(prev: ComicDoc, next: ComicDoc): ComicDo
 export function pruneCharacters(doc: ComicDoc): ComicDoc {
   doc.characters = doc.characters.filter((c) => c.isMain || c.lineCount > 0)
   return doc
+}
+
+// ------------------------------------------------------------ proofreading --
+
+/** Lines of a page numbered in reading order, for the proofreading pass. */
+export function verifyLines(doc: ComicDoc, pageIndex: number): VerifyLine[] {
+  const out: VerifyLine[] = []
+  const names = new Map(doc.characters.map((c) => [c.id, c.id]))
+  doc.pages[pageIndex]?.panels.forEach((p, pi) =>
+    p.lines.forEach((l) =>
+      out.push({
+        n: out.length + 1,
+        panel: pi + 1,
+        kind: l.kind,
+        speaker: l.speakerId ? (names.get(l.speakerId) ?? l.speakerId) : '',
+        text: l.text,
+      }),
+    ),
+  )
+  return out
+}
+
+/**
+ * Apply the proofreading result: reorder lines inside panels, fix speakers and
+ * drop duplicates. Anything inconsistent (unknown numbers, lines moved between
+ * panels, incomplete lists) is ignored for that panel, so a bad answer can
+ * never lose or scramble lines. Returns the number of changed lines.
+ */
+export function applyVerification(doc: ComicDoc, pageIndex: number, res: VerifyPageResult): number {
+  const page = doc.pages[pageIndex]
+  if (!page) return 0
+  const ids = new Set(doc.characters.map((c) => c.id))
+  // Global line number -> [panel index, line]
+  const byN = new Map<number, { panel: number; line: Line }>()
+  let n = 0
+  page.panels.forEach((p, pi) => p.lines.forEach((line) => byN.set(++n, { panel: pi, line })))
+  let changed = 0
+
+  const panels = page.panels.map((p, pi) => {
+    const answer = res.panels.find((x) => x.panel === pi + 1)
+    if (!answer) return p
+    const ns = answer.lines.map((l) => l.n)
+    const expected = [...byN].filter(([, v]) => v.panel === pi).map(([k]) => k)
+    const valid =
+      ns.length === expected.length && new Set(ns).size === ns.length && ns.every((k) => expected.includes(k))
+    if (!valid) return p
+    const lines: Line[] = []
+    answer.lines.forEach((a, idx) => {
+      const orig = byN.get(a.n)!.line
+      if (a.drop) {
+        changed++
+        return
+      }
+      let next = orig
+      if (
+        orig.kind !== 'narration' &&
+        orig.kind !== 'sfx' &&
+        a.speaker &&
+        a.speaker !== orig.speakerId &&
+        ids.has(a.speaker)
+      ) {
+        next = { ...next, speakerId: a.speaker, audio: null }
+      }
+      if (next !== orig || expected[idx] !== a.n) changed++
+      lines.push(next)
+    })
+    return { ...p, lines }
+  })
+  doc.pages = doc.pages.map((pg) => (pg.index === pageIndex ? { ...pg, panels } : pg))
+  recountLines(doc)
+  return changed
 }
