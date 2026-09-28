@@ -24,13 +24,14 @@
 
 ## Proměnné prostředí
 
-| Proměnná               | Význam                                                                 |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `OPENAI_API_KEY`       | OpenAI klíč (klíč uložený v aplikaci má přednost)                      |
-| `ELEVENLABS_API_KEY`   | ElevenLabs klíč                                                        |
-| `CTYRLISTEK_MOCK_AI=1` | analýza bez OpenAI – deterministická simulace z lokální detekce okének |
-| `CTYRLISTEK_DATA_DIR`  | jiná složka s daty (testy tak nesahají na skutečnou knihovnu)          |
-| `CTYRLISTEK_HIDDEN=1`  | nezobrazovat okno (automatizace)                                       |
+| Proměnná                                  | Význam                                                                 |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                          | OpenAI klíč (klíč uložený v aplikaci má přednost)                      |
+| `ELEVENLABS_API_KEY`                      | ElevenLabs klíč                                                        |
+| `CTYRLISTEK_MOCK_AI=1`                    | analýza bez OpenAI – deterministická simulace z lokální detekce okének |
+| `CTYRLISTEK_DATA_DIR`                     | jiná složka s daty (testy tak nesahají na skutečnou knihovnu)          |
+| `CTYRLISTEK_HIDDEN=1`                     | nezobrazovat okno (automatizace)                                       |
+| `OPENAI_BASE_URL` / `ELEVENLABS_BASE_URL` | jiná adresa API (integrační testy, proxy)                              |
 
 Rychlé vyzkoušení bez klíčů:
 
@@ -43,6 +44,7 @@ V Nastavení pak přepněte hlasy na **Systémové**.
 ## Testy
 
 - **Unit** (`test/unit`): detekce okének a bublin na syntetických rastrech, slučování postav, obsazování hlasů, audio tagy a prozodie, časování slov, časová osa, převod odpovědi AI a **kontrola, že JSON schémata splňují strict mode OpenAI** (všechny vlastnosti v `required`, `additionalProperties: false`).
+- **Integrační** (`test/integration`): skutečný kód OpenAI SDK a ElevenLabs klienta proti lokálnímu falešnému serveru (`OPENAI_BASE_URL`, `ELEVENLABS_BASE_URL`) – ověřuje přesný tvar požadavků (strict JSON schéma, obrázky, audio tagy, `language_code`, zvukové efekty), zpracování odpovědí, chybové hlášky, cache a záložní endpoint. Bez klíčů a bez nákladů.
 - **E2E** (`scripts/e2e.mjs`): spustí sestavenou aplikaci s prázdnou datovou složkou a `CTYRLISTEK_MOCK_AI=1`, nahraje testovací komiks, vyřeší nejistou postavu, otevře editor, namluví repliky systémovým hlasem a přehrává. Kontroluje i chyby v konzoli.
 
 Skutečná volání OpenAI/ElevenLabs testy nepoužívají (stojí peníze a vyžadují klíče). Po změnách v `src/main/ai` nebo `src/main/tts` je ověřte ručně s vlastními klíči na krátkém PDF.
