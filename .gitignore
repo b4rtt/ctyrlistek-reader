@@ -1,0 +1,27 @@
+# dependencies & build output
+node_modules/
+out/
+dist/
+release/
+coverage/
+
+# generated pdf.js runtime assets (copied on postinstall)
+src/renderer/public/pdfjs/
+
+# local data, secrets, test artefacts
+.env
+.env.*
+*.log
+test-results/
+.e2e-data/
+screenshots/
+
+# comics are copyrighted – never commit real comic PDFs
+*.pdf
+!test/fixtures/*.pdf
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
