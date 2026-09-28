@@ -31,7 +31,8 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 export async function analyzePageMock(req: AnalyzePageRequest): Promise<AnalyzePageResult> {
   await sleep(250 + Math.random() * 400)
-  const ordered = [...req.candidates].sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)
+  // Candidates already come in reading order from the local detector.
+  const ordered = req.candidates
   const panels: { label: string | null; rect: AiPanel['rect'] }[] = ordered.length
     ? ordered
     : [{ label: null, rect: { x: 0.05, y: 0.05, w: 0.9, h: 0.9 } }]
