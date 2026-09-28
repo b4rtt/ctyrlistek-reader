@@ -72,6 +72,12 @@ export async function saveComic(doc: ComicDoc): Promise<ComicDoc> {
   return next
 }
 
+/** Update only the playback position (read-modify-write inside the main process). */
+export async function setLastBeat(id: string, beat: number): Promise<void> {
+  const doc = await loadComic(id)
+  await writeJsonAtomic(join(comicDir(id), DOC_FILE), { ...doc, meta: { ...doc.meta, lastBeat: beat } })
+}
+
 export async function createComic(title: string, pdf: Uint8Array): Promise<ComicDoc> {
   const id = `${Date.now().toString(36)}-${randomBytes(3).toString('hex')}`
   const dir = comicDir(id)

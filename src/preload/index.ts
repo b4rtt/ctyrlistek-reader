@@ -22,6 +22,7 @@ const api: AppApi = {
     remove: invoke('library:remove'),
     writePage: invoke('library:writePage'),
     readSource: invoke('library:readSource'),
+    setLastBeat: invoke('library:setLastBeat'),
     reveal: invoke('library:reveal'),
   },
   ai: {

@@ -129,7 +129,13 @@ export class ImportJob {
   private async render(): Promise<void> {
     this.set({ phase: 'rendering' })
     const bytes = this.pdfBytes ?? (await api.library.readSource(this.doc.meta.id))
-    const { pdf, close } = await openPdf(bytes)
+    const { pdf, close } = await openPdf(bytes).catch((err: unknown) => {
+      const name = (err as { name?: string }).name
+      if (name === 'PasswordException')
+        throw new Error('PDF je chráněné heslem – uložte ho prosím bez hesla.')
+      if (name === 'InvalidPDFException') throw new Error('Soubor je poškozený nebo to není platné PDF.')
+      throw err
+    })
     this.pdfBytes = null
     try {
       this.set({ total: pdf.numPages, rendered: 0 })
@@ -207,6 +213,20 @@ export class ImportJob {
         for (let idx = next(); idx !== undefined; idx = next()) await this.analyzePage(idx)
       }),
     )
+
+    // One calm retry pass (one page at a time) for transient failures such as
+    // rate limits or network hiccups.
+    const failed = this.doc.pages.filter(
+      (p) => p.status === 'error' && (!onlyPages || onlyPages.includes(p.index)),
+    )
+    if (failed.length && !this.cancelled && !this.state.error) {
+      await new Promise((r) => setTimeout(r, 4000))
+      this.set({ failed: 0 })
+      for (const p of failed) {
+        if (this.cancelled || this.state.error) break
+        await this.analyzePage(p.index)
+      }
+    }
   }
 
   private async analyzePage(index: number): Promise<void> {

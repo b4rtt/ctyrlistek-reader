@@ -37,6 +37,16 @@ export async function listSystemVoices(): Promise<SystemVoiceInfo[]> {
   return voicesCache
 }
 
+/**
+ * Use the requested voice when installed, otherwise the best Czech voice,
+ * otherwise the system default (undefined).
+ */
+export async function resolveSystemVoice(name: string): Promise<string | undefined> {
+  const voices = await listSystemVoices().catch(() => [])
+  if (voices.some((v) => v.name === name)) return name
+  return voices.find((v) => v.lang === 'cs_CZ')?.name
+}
+
 /** Default speaking rate of macOS voices in words per minute. */
 const BASE_WPM = 180
 
@@ -60,23 +70,18 @@ export async function synthesizeSystem(p: SystemSynthParams): Promise<{ wav: Buf
     `ctyrlistek-say-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`,
   )
   try {
-    await run(
-      'say',
-      [
-        '-v',
-        p.voice,
-        '-r',
-        String(wpm),
-        '--file-format=WAVE',
-        '--data-format=LEI16@22050',
-        '-o',
-        tmp,
-        p.text,
-      ],
-      {
-        timeout: 60_000,
-      },
-    )
+    const voice = await resolveSystemVoice(p.voice)
+    const args = [
+      ...(voice ? ['-v', voice] : []),
+      '-r',
+      String(wpm),
+      '--file-format=WAVE',
+      '--data-format=LEI16@22050',
+      '-o',
+      tmp,
+      p.text,
+    ]
+    await run('say', args, { timeout: 60_000 })
     const pcm = decodeWav(await fs.readFile(tmp))
     let samples = trimSilence(pcm.samples, pcm.sampleRate)
     samples = pitchShift(samples, factor)

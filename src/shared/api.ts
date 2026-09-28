@@ -257,6 +257,7 @@ export interface AppApi {
     remove(id: string): Promise<void>
     writePage(id: string, index: number, jpeg: Uint8Array, variant?: 'page' | 'thumb'): Promise<string>
     readSource(id: string): Promise<Uint8Array>
+    setLastBeat(id: string, beat: number): Promise<void>
     reveal(id: string | null): Promise<void>
   }
   ai: {

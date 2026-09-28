@@ -56,6 +56,7 @@ export function registerIpc(): void {
     library.writePage(id, index, jpeg, variant),
   )
   handle('library:readSource', (id: string) => library.readSource(id))
+  handle('library:setLastBeat', (id: string, beat: number) => library.setLastBeat(id, beat))
   handle('library:reveal', (id: string | null) => library.revealComic(id))
 
   handle('ai:analyzePage', (req: AnalyzePageRequest) =>

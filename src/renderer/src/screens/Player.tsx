@@ -87,10 +87,7 @@ export function Player({ id }: { id: string }): React.JSX.Element {
       if (disposed) return
       if (prepared.notice) toast(prepared.notice)
       const savePosition = (beat: number): void => {
-        void api.library
-          .load(id)
-          .then((d) => api.library.save({ ...d, meta: { ...d.meta, lastBeat: beat } }))
-          .catch(() => undefined)
+        void api.library.setLastBeat(id, beat).catch(() => undefined)
       }
       const c = new PlayerController(prepared.doc, prepared.settings, savePosition)
       ctrl.current = c

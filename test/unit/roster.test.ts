@@ -181,3 +181,34 @@ describe('mergeCharacters / applyConsolidation', () => {
     expect(doc.characters).toHaveLength(before)
   })
 })
+
+describe('invalidateChangedVoices', () => {
+  it('clears audio only for characters whose voice changed', async () => {
+    const { invalidateChangedVoices } = await import('../../src/shared/roster')
+    const doc = makeDoc()
+    applyPageResult(
+      doc,
+      0,
+      result([{ label: null, rect: R, lines: [aiLine('bobik', 'A'), aiLine('pinda', 'B')] }], []),
+      {
+        candidates: [],
+      },
+    )
+    const audio = {
+      file: 'audio/x.mp3',
+      durationMs: 1,
+      words: null,
+      key: 'x',
+      provider: 'elevenlabs' as const,
+    }
+    doc.pages[0].panels[0].lines = doc.pages[0].panels[0].lines.map((l) => ({ ...l, audio }))
+    const next = {
+      ...doc,
+      characters: doc.characters.map((c) =>
+        c.id === 'bobik' ? { ...c, voice: { ...c.voice, elevenVoiceId: 'new' } } : c,
+      ),
+    }
+    const out = invalidateChangedVoices(doc, next)
+    expect(out.pages[0].panels[0].lines.map((l) => l.audio)).toEqual([null, audio])
+  })
+})

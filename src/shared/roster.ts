@@ -323,6 +323,41 @@ export function applyConsolidation(doc: ComicDoc, res: ConsolidateResult): Comic
   return doc
 }
 
+/**
+ * After a casting change, forget generated audio of characters whose voice
+ * changed (the old recordings would play the wrong voice).
+ */
+export function invalidateChangedVoices(prev: ComicDoc, next: ComicDoc): ComicDoc {
+  const changed = new Set<string>()
+  for (const c of next.characters) {
+    const old = prev.characters.find((o) => o.id === c.id)
+    if (!old) continue
+    const a = old.voice
+    const b = c.voice
+    if (
+      a.elevenVoiceId !== b.elevenVoiceId ||
+      a.systemVoice !== b.systemVoice ||
+      a.pitch !== b.pitch ||
+      a.rate !== b.rate
+    ) {
+      changed.add(c.id)
+    }
+  }
+  if (changed.size === 0) return next
+  return {
+    ...next,
+    pages: next.pages.map((pg) => ({
+      ...pg,
+      panels: pg.panels.map((p) => ({
+        ...p,
+        lines: p.lines.map((l) =>
+          l.speakerId && changed.has(l.speakerId) && l.audio ? { ...l, audio: null } : l,
+        ),
+      })),
+    })),
+  }
+}
+
 /** Drop auto-created characters that ended up with no lines (keeps heroes). */
 export function pruneCharacters(doc: ComicDoc): ComicDoc {
   doc.characters = doc.characters.filter((c) => c.isMain || c.lineCount > 0)

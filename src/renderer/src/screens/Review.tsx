@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SettingsView, VoiceInfo } from '@shared/api'
-import { mergeCharacters, needsReview } from '@shared/roster'
+import { invalidateChangedVoices, mergeCharacters, needsReview } from '@shared/roster'
 import { allLines } from '@shared/timeline'
 import type { AgeGroup, Character, ComicDoc, Gender } from '@shared/types'
 import { useNav } from '../App'
@@ -278,7 +278,9 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
     if (!doc || !settings || voices.loading) return
     update((d) => {
       const next = castVoices(d, settings, voices.eleven)
-      return next.characters.every((c, i) => sameVoice(c, d.characters[i])) ? d : next
+      return next.characters.every((c, i) => sameVoice(c, d.characters[i]))
+        ? d
+        : invalidateChangedVoices(d, next)
     })
   }, [doc, settings, voices.loading, voices.eleven, update])
 
@@ -341,15 +343,23 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
   const failedPages = doc.pages.filter((p) => p.status !== 'done').length
 
   const setCharacter = (next: Character): void =>
-    update((d) => ({ ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) }))
+    update((d) =>
+      invalidateChangedVoices(d, {
+        ...d,
+        characters: d.characters.map((c) => (c.id === next.id ? next : c)),
+      }),
+    )
 
   const recast = (next: Character): void =>
     update((d) =>
-      recastOne(
-        { ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) },
-        next.id,
-        settings,
-        voices.eleven,
+      invalidateChangedVoices(
+        d,
+        recastOne(
+          { ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) },
+          next.id,
+          settings,
+          voices.eleven,
+        ),
       ),
     )
 

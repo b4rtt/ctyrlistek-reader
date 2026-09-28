@@ -51,6 +51,7 @@ ComicDoc
    - okénko potvrzené AI se nahradí přesným lokálním kandidátem (`choosePanelRect`),
    - poloha bubliny se zpřesní lokálně (`cv/bubbles.ts`): z několika bodů uvnitř přibližného rámečku se vyplní souvislá světlá oblast bubliny; vybere se výplň, která s rámečkem AI nejlépe sedí,
    - klíče postav se namapují na stabilní ID; stejné (nikoli obecné) jméno na jiné stránce = stejná postava.
+   - Stránky, které selžou (např. přetížení API), se na konci zkusí znovu po jedné.
 5. **Sjednocení postav** – druhé, levné volání AI dostane seznam postav s ukázkami replik, jak je oslovují ostatní, a portréty; vrátí sloučení duplicit a lepší jména/pohlaví. Když selže, import pokračuje.
 
 Postava s nejistým jménem nebo pohlavím má `needsReview()` → obrazovka **Postavy a hlasy** ji zvýrazní.
@@ -78,7 +79,9 @@ Pro systémové hlasy dostane každá postava posun výšky (půltóny) a tempo 
 ### Generování a cache (`src/main/tts/audio.ts`)
 
 - Klíč cache = hash všeho, co ovlivňuje zvuk (text, tagy, hlas, model, nastavení, verze pipeline). Stejná replika se nikdy negeneruje dvakrát.
-- ElevenLabs volání mají semafor (souběžnost z nastavení), opakování s exponenciálním odstupem při 429/5xx a `retry-after`.
+- ElevenLabs volání mají **prioritní semafor** (souběžnost z nastavení): repliky, které přehrávač potřebuje hned, předbíhají generování na pozadí, a když přehrávač požádá o repliku, která už čeká ve frontě pozadí, její priorita se zvýší. Opakování s exponenciálním odstupem při 429/5xx a `retry-after`.
+- **Generování na pozadí** (`src/renderer/src/pipeline/voiceJob.ts`) běží nezávisle na obrazovkách – „Přehrát komiks“ spustí přehrávač okamžitě a zbytek replik se namlouvá souběžně. Po dokončení se odkazy na zvuky sloučí do aktuálně uloženého dokumentu.
+- Změna hlasu postavy zneplatní její dříve namluvené repliky (`invalidateChangedVoices`).
 - `/with-timestamps` vrací časování znaků → časování slov pro „karaoke“ titulky (`src/shared/alignment.ts`). Když endpoint pro model nefunguje, použije se běžný endpoint a odhad časování.
 - Systémové TTS (`src/main/tts/system.ts`): macOS `say` → WAV. Moderní hlasy ignorují `[[pbas]]`/`[[volm]]`, proto se výška mění **převzorkováním** WAV (`wav.ts`) a tempo se předem kompenzuje parametrem `-r`. Ticho na začátku a konci se ořízne, aby přehrávání mělo spád.
 
