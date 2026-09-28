@@ -47,7 +47,18 @@ V Nastavení pak přepněte hlasy na **Systémové**.
 - **Integrační** (`test/integration`): skutečný kód OpenAI SDK a ElevenLabs klienta proti lokálnímu falešnému serveru (`OPENAI_BASE_URL`, `ELEVENLABS_BASE_URL`) – ověřuje přesný tvar požadavků (strict JSON schéma, obrázky, audio tagy, `language_code`, zvukové efekty), zpracování odpovědí, chybové hlášky, cache a záložní endpoint. Bez klíčů a bez nákladů.
 - **E2E** (`scripts/e2e.mjs`): spustí sestavenou aplikaci s prázdnou datovou složkou a `CTYRLISTEK_MOCK_AI=1`, nahraje testovací komiks, vyřeší nejistou postavu, otevře editor, namluví repliky systémovým hlasem a přehrává. Kontroluje i chyby v konzoli.
 
-Skutečná volání OpenAI/ElevenLabs testy nepoužívají (stojí peníze a vyžadují klíče). Po změnách v `src/main/ai` nebo `src/main/tts` je ověřte ručně s vlastními klíči na krátkém PDF.
+### Test se skutečnými klíči
+
+Klíče jsou šifrované přes `safeStorage` (macOS Klíčenka). Electron spuštěný **přes Playwright** je nedokáže dešifrovat – aplikaci proto spusťte normálně a ovládejte ji přes DevTools protokol:
+
+```bash
+CTYRLISTEK_SELFTEST=1 npx electron .                     # ověří uložené klíče (hodnoty nevypisuje) a skončí
+CTYRLISTEK_DATA_DIR=/tmp/kopie-dat npx electron . --remote-debugging-port=9333
+```
+
+a v testovacím skriptu `chromium.connectOverCDP('http://127.0.0.1:9333')` (Playwright). Pro test na kopii knihovny zkopírujte do nové datové složky `settings.json`, `secrets.json` a složku komiksu.
+
+Skutečná volání OpenAI/ElevenLabs automatické testy nepoužívají (stojí peníze a vyžadují klíče). Po změnách v `src/main/ai` nebo `src/main/tts` je ověřte ručně s vlastními klíči na krátkém PDF.
 
 ## Struktura
 

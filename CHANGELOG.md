@@ -4,6 +4,20 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), ve
 
 ## [Unreleased]
 
+### Přidáno
+
+- Korekturní průchod AI: kontrola mluvčích podle ocásků bublin, pořadí replik podle logiky dialogu a vyřazení zdvojených textů.
+- Nastavení _Přiblížení okének_ (jemné / střední / výrazné), i v menu přehrávače.
+- Tlačítko „Celý komiks“ v editoru – znovu přečte všechny strany.
+- `CTYRLISTEK_SELFTEST=1` – rychlé ověření uložených API klíčů.
+
+### Změněno
+
+- Kamera zabírá okénko včetně všech jeho bublin (bubliny přesahující do sousedního okénka se už neuseknou) a přibližuje méně, s okolním kontextem.
+- Jemnější zvýraznění bubliny a měkčí ztmavení zbytku stránky; titulek se objeví až s hlasem.
+- Přesnější instrukce pro AI: každé orámované okénko zvlášť, bubliny celé i přes okraj, tiráž (autoři, čísla stran) se nečte.
+- Zpřesnění poloh bublin zvládá těsné písmo dotýkající se obrysu (typické pro Čtyřlístek).
+
 ## [0.1.0] – 2026-09-28
 
 První veřejná verze.

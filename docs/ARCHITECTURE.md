@@ -49,10 +49,11 @@ ComicDoc
    - AI vrací okénka v pořadí čtení (s odkazem na kandidáta nebo vlastním rámečkem), repliky (druh, mluvčí, přepis, text pro TTS, emoce, intenzita, přednes, herecká poznámka, poloha bubliny, popis zvukového efektu) a postavy (jméno + jistota + zdůvodnění, pohlaví podle české gramatiky + jistota, věk, vzhled, hlasové rysy, poloha obličeje).
 4. **Zpracování výsledku** (`src/shared/roster.ts`):
    - okénko potvrzené AI se nahradí přesným lokálním kandidátem (`choosePanelRect`),
-   - poloha bubliny se zpřesní lokálně (`cv/bubbles.ts`): z několika bodů uvnitř přibližného rámečku se vyplní souvislá světlá oblast bubliny; vybere se výplň, která s rámečkem AI nejlépe sedí,
+   - poloha bubliny se zpřesní lokálně (`cv/bubbles.ts`): z mřížky bodů kolem přibližného rámečku se vyplňují světlé oblasti a **sjednotí se všechny kousky bubliny** (v Čtyřlístku se písmena často dotýkají obrysu a rozdělí vnitřek na několik částí). Kousky musí ležet v rámečku AI zvětšeném o 12 % (jinak by se přibralo bílé okolí kresby) a okraj stránky mimo okénka je „zeď“,
    - klíče postav se namapují na stabilní ID; stejné (nikoli obecné) jméno na jiné stránce = stejná postava.
    - Stránky, které selžou (např. přetížení API), se na konci zkusí znovu po jedné.
-5. **Sjednocení postav** – druhé, levné volání AI dostane seznam postav s ukázkami replik, jak je oslovují ostatní, a portréty; vrátí sloučení duplicit a lepší jména/pohlaví. Když selže, import pokračuje.
+5. **Korektura** (volitelná, výchozí zapnuto) – druhé volání AI dostane stránku s orámovanými okénky a **očíslovanými bublinami v aktuálním pořadí**. Opraví jen mluvčí (podle ocásku), pořadí uvnitř okénka (aby dialog dával smysl) a označí zdvojené texty. Odpověď se použije jen tehdy, když je konzistentní (každé okénko obsahuje přesně svoje repliky) – špatná odpověď tak nikdy nemůže repliky ztratit ani zamíchat (`applyVerification`).
+6. **Sjednocení postav** – druhé, levné volání AI dostane seznam postav s ukázkami replik, jak je oslovují ostatní, a portréty; vrátí sloučení duplicit a lepší jména/pohlaví. Když selže, import pokračuje.
 
 Postava s nejistým jménem nebo pohlavím má `needsReview()` → obrazovka **Postavy a hlasy** ji zvýrazní.
 
@@ -90,7 +91,8 @@ Pro systémové hlasy dostane každá postava posun výšky (půltóny) a tempo 
 - `buildTimeline` (`src/shared/timeline.ts`) zploští komiks na **beaty**: replika, nebo tiché okénko/stránka.
 - `PlayerController` je nezávislý na Reactu: prochází beaty, řídí kameru, přehrává zvuk a publikuje stav. Všechna čekání jsou **pozastavitelná** a vázaná na „generaci“ – přeskočení spustí novou generaci a stará smyčka tiše skončí. Po posunu v pauze se smyčka rozběhne od zobrazeného beatu.
 - Zvuk se **předem načítá** (5 replik dopředu); když chybí, vygeneruje se za běhu (ukazatel „Připravuji hlas…“), a když selže, nastoupí Web Speech, aby příběh nikdy nezamrzl.
-- Kamera (`camera.ts`) spočítá transformaci, která okénko vycentruje nad titulky (max. zoom 3,4×); přechody jsou CSS transformace s délkou podle vzdálenosti. Reflektor je prvek s obřím `box-shadow`, bublina svítí barvou mluvčího. Zvukové efekty zatřesou scénou.
+- Kamera zabírá **okénko včetně všech jeho bublin** (`panelFocus`) – bubliny často přesahují přes rámeček do mezery nebo do sousedního okénka a nesmí se useknout. `camera.ts` přidá kolem kontext (okraj) a omezí zoom podle předvolby _Přiblížení_ (jemné 1,6× / střední 2,1× / výrazné 2,8× vůči celé stránce). Přechody jsou CSS transformace s délkou podle vzdálenosti.
+- Reflektor (měkce rozmazaný okraj, střední ztmavení) a klidné halo kolem mluvící bubliny v barvě mluvčího. Titulek a halo se objeví až ve chvíli, kdy kamera doletí a začne hlas. Zvukové efekty zatřesou scénou.
 - Pozice se ukládá při začátku stránky a pauze (`meta.lastBeat`).
 
 ## Protokoly a bezpečnost

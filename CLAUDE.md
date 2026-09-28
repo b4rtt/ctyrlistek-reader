@@ -30,4 +30,6 @@ CTYRLISTEK_MOCK_AI=1 npm run dev      # run without API keys
 - Modules imported by unit tests must not import `electron` (keep pure logic in `src/shared` or pure files like `wav.ts`, `convert.ts`, `voiceInfo.ts`).
 - Audio cache keys include `PIPELINE_VERSION` in `src/main/tts/audio.ts` – bump it when the synthesis pipeline changes.
 - The import job keeps its in-memory document authoritative; never replace it with the result of `library.save()` (concurrent page results would be lost).
+- Electron launched by Playwright (`_electron.launch`) cannot decrypt the stored API keys (safeStorage/Keychain). For real-key tests launch normally (`npx electron . --remote-debugging-port=9333`, optionally with `CTYRLISTEK_DATA_DIR` pointing to a copy) and drive it with `chromium.connectOverCDP`. `CTYRLISTEK_SELFTEST=1` checks the keys.
+- Balloon refinement (`cv/bubbles.ts`) parameters were tuned on real scanned Čtyřlístek pages – re-check on real pages before changing the 12 % zone.
 - `PlayerController` waits are generation-bound; any new async step in the loop must check `gen === this.gen` / use `wait()`.
