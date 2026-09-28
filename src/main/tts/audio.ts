@@ -18,25 +18,35 @@ import { synthesizeSystem, systemTtsSupported } from './system'
 const PIPELINE_VERSION = 3
 export const PREVIEW_HOST = 'preview-cache'
 
+interface Ticket {
+  /** Can be raised while waiting (a background job's line is suddenly needed by the player). */
+  high: boolean
+}
+
+/** Concurrency limiter where high-priority tickets jump the queue. */
 class Semaphore {
-  private queue: (() => void)[] = []
+  private waiting: { wake: () => void; ticket: Ticket }[] = []
   private active = 0
   constructor(private limit: () => number) {}
-  async run<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.active >= this.limit()) await new Promise<void>((r) => this.queue.push(r))
-    this.active++
+
+  async run<T>(fn: () => Promise<T>, ticket: Ticket): Promise<T> {
+    if (this.active < this.limit()) this.active++
+    else await new Promise<void>((wake) => this.waiting.push({ wake, ticket }))
     try {
       return await fn()
     } finally {
-      this.active--
-      this.queue.shift()?.()
+      const i = this.waiting.findIndex((w) => w.ticket.high)
+      const next = this.waiting.splice(i >= 0 ? i : 0, 1)[0]
+      // Hand the slot straight to the next waiter (keeps `active` exact).
+      if (next) next.wake()
+      else this.active--
     }
   }
 }
 
 const elevenGate = new Semaphore(() => getSettings().elevenConcurrency)
 const systemGate = new Semaphore(() => 3)
-const inflight = new Map<string, Promise<AudioRef>>()
+const inflight = new Map<string, { promise: Promise<AudioRef>; ticket: Ticket }>()
 
 function hash(obj: unknown): string {
   return createHash('sha1').update(JSON.stringify(obj)).digest('hex').slice(0, 20)
@@ -85,18 +95,23 @@ async function store(
 /** Constant-bitrate MP3 duration estimate (we always request 128 kbps). */
 const mp3DurationMs = (bytes: number): number => Math.round((bytes * 8) / 128)
 
-function dedupe(key: string, fn: () => Promise<AudioRef>): Promise<AudioRef> {
+function dedupe(key: string, high: boolean, fn: (ticket: Ticket) => Promise<AudioRef>): Promise<AudioRef> {
   const existing = inflight.get(key)
-  if (existing) return existing
-  const p = fn().finally(() => inflight.delete(key))
-  inflight.set(key, p)
-  return p
+  if (existing) {
+    if (high) existing.ticket.high = true
+    return existing.promise
+  }
+  const ticket: Ticket = { high }
+  const promise = fn(ticket).finally(() => inflight.delete(key))
+  inflight.set(key, { promise, ticket })
+  return promise
 }
 
 export async function synthesizeLine(req: SynthesizeRequest): Promise<AudioRef | null> {
   const text = req.text.trim()
   if (!text) return null
   const settings = getSettings()
+  const high = req.priority !== 'low'
   const perf = { kind: req.kind, emotion: req.emotion, intensity: req.intensity, delivery: req.delivery }
   const dir = audioDir(req.comicId)
 
@@ -113,11 +128,12 @@ export async function synthesizeLine(req: SynthesizeRequest): Promise<AudioRef |
       rate: req.voice.rate,
       prosody,
     })
-    return dedupe(key, async () => {
+    return dedupe(key, high, async (ticket) => {
       const hit = await cached(dir, key, 'wav', 'system')
       if (hit) return hit
-      const { wav, durationMs } = await systemGate.run(() =>
-        synthesizeSystem({ text, voice, pitch: req.voice.pitch, rate: req.voice.rate, prosody }),
+      const { wav, durationMs } = await systemGate.run(
+        () => synthesizeSystem({ text, voice, pitch: req.voice.pitch, rate: req.voice.rate, prosody }),
+        ticket,
       )
       return store(
         dir,
@@ -151,19 +167,21 @@ export async function synthesizeLine(req: SynthesizeRequest): Promise<AudioRef |
     nextText,
   })
 
-  return dedupe(key, async () => {
+  return dedupe(key, high, async (ticket) => {
     const hit = await cached(dir, key, 'mp3', 'elevenlabs')
     if (hit) return hit
-    const res = await elevenGate.run(() =>
-      synthesize({
-        voiceId,
-        text: input,
-        modelId: model,
-        voiceSettings: { ...voiceSettings },
-        languageCode,
-        previousText,
-        nextText,
-      }),
+    const res = await elevenGate.run(
+      () =>
+        synthesize({
+          voiceId,
+          text: input,
+          modelId: model,
+          voiceSettings: { ...voiceSettings },
+          languageCode,
+          previousText,
+          nextText,
+        }),
+      ticket,
     )
     const durationMs = mp3DurationMs(res.audio.length)
     const words = wordsFromAlignment(text, offset, res.alignment, durationMs / 1000)
@@ -177,10 +195,10 @@ export async function generateSfx(req: SfxRequest): Promise<AudioRef> {
   const duration = Math.min(3, Math.max(0.8, req.text.length * 0.18))
   const key = hash({ v: PIPELINE_VERSION, e: 'sfx', prompt, duration })
   const dir = audioDir(req.comicId)
-  return dedupe(key, async () => {
+  return dedupe(key, req.priority !== 'low', async (ticket) => {
     const hit = await cached(dir, key, 'mp3', 'elevenlabs')
     if (hit) return hit
-    const audio = await elevenGate.run(() => soundEffect(prompt, duration))
+    const audio = await elevenGate.run(() => soundEffect(prompt, duration), ticket)
     return store(
       dir,
       key,

@@ -102,6 +102,8 @@ export interface PageData {
   index: number
   /** Path relative to the comic directory, e.g. `pages/p001.jpg`. */
   image: string
+  /** Small preview (long side ~480 px) for grids; older imports may lack it. */
+  thumb?: string
   width: number
   height: number
   kind: PageKind

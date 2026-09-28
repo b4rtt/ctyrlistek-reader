@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SettingsView, VoiceInfo } from '@shared/api'
 import { mergeCharacters, needsReview } from '@shared/roster'
 import { allLines } from '@shared/timeline'
@@ -12,14 +12,8 @@ import { Progress, Segmented, useToast } from '../components/ui'
 import { useComicDoc } from '../hooks/useComicDoc'
 import { updateSettings, useSettings } from '../hooks/useSettings'
 import { useVoices } from '../hooks/useVoices'
-import {
-  castVoices,
-  lineRequest,
-  prepareVoices,
-  recastOne,
-  totalCharacters,
-  type VoiceProgress,
-} from '../pipeline/voices'
+import { getVoiceJob, startVoiceJob, subscribeVoiceJobs, type VoiceJobState } from '../pipeline/voiceJob'
+import { castVoices, lineRequest, recastOne, totalCharacters } from '../pipeline/voices'
 import { PagesEditor } from './PagesEditor'
 
 const GENDER_OPTIONS: { value: Gender; label: string; className?: string }[] = [
@@ -275,9 +269,9 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
   const elevenEnabled = settings?.voiceMode === 'elevenlabs' && !!settings.elevenKey
   const voices = useVoices(elevenEnabled)
   const [tab, setTab] = useState<'cast' | 'pages'>(initialTab ?? 'cast')
-  const [progress, setProgress] = useState<VoiceProgress | null>(null)
+  const [job, setJob] = useState<VoiceJobState | null>(() => getVoiceJob(id)?.state ?? null)
   const [quota, setQuota] = useState<{ used: number; limit: number } | null>(null)
-  const abort = useRef<AbortController | null>(null)
+  const progress = job?.running ? job : null
 
   // Automatic casting whenever the doc, the voice list or the mode changes.
   useEffect(() => {
@@ -292,7 +286,33 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
     if (elevenEnabled) void api.voices.quota().then((q) => q && setQuota(q))
   }, [elevenEnabled])
 
-  useEffect(() => () => abort.current?.abort(), [])
+  // Follow the background voice job; reload the document when it finishes so
+  // the "voiced" counters include the new audio.
+  useEffect(() => {
+    let unsub: (() => void) | undefined
+    let wasRunning = false
+    const attach = (): void => {
+      unsub?.()
+      unsub = getVoiceJob(id)?.subscribe((s) => {
+        setJob(s)
+        if (wasRunning && !s.running) {
+          if (s.error) toast(s.error, 'error')
+          else if (s.failed > 0)
+            toast(`${s.failed} replik se nepodařilo namluvit – zkusí se znovu při přehrávání.`, 'error')
+          void flush().then(reload)
+        }
+        wasRunning = s.running
+      })
+    }
+    attach()
+    const unsubRegistry = subscribeVoiceJobs(() => {
+      if (getVoiceJob(id)?.state.running && !wasRunning) attach()
+    })
+    return () => {
+      unsub?.()
+      unsubRegistry()
+    }
+  }, [id, flush, reload, toast])
 
   if (!doc || !settings) {
     return (
@@ -345,31 +365,27 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
     update((d) => mergeCharacters(structuredClone(d), into, [from]))
   }
 
-  const prepare = async (): Promise<boolean> => {
+  const voicesAvailable = (): boolean => {
     if (settings.voiceMode === 'elevenlabs' && !settings.elevenKey && !settings.mockAi) {
       toast('Doplňte ElevenLabs klíč, nebo přepněte na systémové hlasy.', 'error')
       openSettings('voices')
       return false
     }
-    await flush()
-    abort.current = new AbortController()
-    const { doc: next, error } = await prepareVoices(doc, settings, setProgress, abort.current.signal)
-    update(() => next)
-    await flush()
-    setProgress(null)
-    if (error) {
-      toast(error, 'error')
-      return false
-    }
-    const failed = allLines(next).filter((l) => !l.line.audio && l.line.kind !== 'sfx').length
-    if (failed > 0) toast(`${failed} replik se nepodařilo namluvit – zkusí se znovu při přehrávání.`, 'error')
     return true
   }
 
+  /** Voice all lines in the background (continues when leaving the screen). */
+  const prepare = async (): Promise<void> => {
+    if (!voicesAvailable()) return
+    await flush()
+    startVoiceJob(doc, settings)
+  }
+
+  /** Start playing right away; missing voices are generated in the background. */
   const play = async (): Promise<void> => {
     update((d) => ({ ...d, meta: { ...d.meta, stage: 'ready' } }))
-    if (voiced < lines.length && (await prepare()) === false && settings.voiceMode === 'elevenlabs') return
     await flush()
+    if (voiced < lines.length && voicesAvailable()) startVoiceJob(doc, settings)
     go({ name: 'player', id })
   }
 
@@ -512,7 +528,7 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                 )}
               </div>
               {progress ? (
-                <button className="btn" onClick={() => abort.current?.abort()}>
+                <button className="btn" onClick={() => getVoiceJob(id)?.cancel()}>
                   Zastavit
                 </button>
               ) : (
@@ -522,11 +538,7 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                   </button>
                 )
               )}
-              <button
-                className="btn primary big"
-                onClick={() => void play()}
-                disabled={!!progress || lines.length === 0}
-              >
+              <button className="btn primary big" onClick={() => void play()} disabled={lines.length === 0}>
                 <Icon name="play" /> Přehrát komiks
               </button>
             </div>

@@ -44,6 +44,12 @@ export function fitPatches(
   return { width: Math.max(1, Math.floor(w * scale)), height: Math.max(1, Math.floor(h * scale)) }
 }
 
+/** Copy of `src` scaled so its longer side is at most `maxSide`. */
+export function scaled(src: Drawable, maxSide: number): OffscreenCanvas {
+  const s = Math.min(1, maxSide / Math.max(src.width, src.height))
+  return drawScaled(src, Math.max(1, Math.round(src.width * s)), Math.max(1, Math.round(src.height * s)))
+}
+
 function drawScaled(src: Drawable, width: number, height: number): OffscreenCanvas {
   const c = new OffscreenCanvas(width, height)
   const ctx = c.getContext('2d')!

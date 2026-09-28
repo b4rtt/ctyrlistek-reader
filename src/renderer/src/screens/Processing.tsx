@@ -160,7 +160,7 @@ export function Processing({ id }: { id: string }): React.JSX.Element {
                 <div
                   key={p.index}
                   className={`page-thumb ${p.status} ${active ? 'active' : ''}`}
-                  style={{ backgroundImage: `url("${assetUrl(id, p.image)}")` }}
+                  style={{ backgroundImage: `url("${assetUrl(id, p.thumb ?? p.image)}")` }}
                   title={p.error ?? undefined}
                 >
                   <span className="num">{p.index + 1}</span>

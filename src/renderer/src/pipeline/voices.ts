@@ -78,25 +78,45 @@ export function speakerOf(doc: ComicDoc, line: Line): Character | undefined {
   return doc.characters.find((c) => c.id === (line.speakerId ?? NARRATOR_ID))
 }
 
+/**
+ * Neighbouring lines of the same speaker – gives ElevenLabs v2 models context
+ * for natural intonation. Computed the same way everywhere so cache keys match.
+ */
+export function lineContext(doc: ComicDoc, line: Line): { previousText?: string; nextText?: string } {
+  const items = allLines(doc)
+  const i = items.findIndex((it) => it.line.id === line.id)
+  if (i < 0) return {}
+  const prev = items[i - 1]?.line
+  const next = items[i + 1]?.line
+  return {
+    previousText: prev && prev.speakerId === line.speakerId ? prev.text : undefined,
+    nextText: next && next.speakerId === line.speakerId ? next.text : undefined,
+  }
+}
+
 /** Generate (or fetch from cache) audio for one line. */
 export async function synthesizeLine(
   doc: ComicDoc,
   line: Line,
   settings: Settings,
-  context: { previousText?: string; nextText?: string } = {},
+  priority: 'high' | 'low' = 'high',
 ): Promise<AudioRef | null> {
   if (line.kind === 'sfx') {
     if (settings.voiceMode === 'elevenlabs') {
       if (!settings.sfxEnabled) return null
-      return api.voices.sfx({ comicId: doc.meta.id, prompt: line.sfxPrompt ?? line.text, text: line.text })
+      return api.voices.sfx({ comicId: doc.meta.id, prompt: line.sfxPrompt ?? line.text, text: line.text, priority })
     }
     // System voices: the narrator reads the onomatopoeia with gusto.
     const narrator = doc.characters.find((c) => c.id === NARRATOR_ID)
-    return api.voices.synthesize(
-      lineRequest(doc.meta.id, { ...line, kind: 'narration', delivery: 'loud' }, narrator, settings),
-    )
+    return api.voices.synthesize({
+      ...lineRequest(doc.meta.id, { ...line, kind: 'narration', delivery: 'loud' }, narrator, settings),
+      priority,
+    })
   }
-  return api.voices.synthesize(lineRequest(doc.meta.id, line, speakerOf(doc, line), settings, context))
+  return api.voices.synthesize({
+    ...lineRequest(doc.meta.id, line, speakerOf(doc, line), settings, lineContext(doc, line)),
+    priority,
+  })
 }
 
 const FATAL = new Set(['AUTH', 'QUOTA', 'NO_ELEVEN_KEY'])
@@ -110,6 +130,7 @@ export async function prepareVoices(
   settings: SettingsView,
   onProgress: (p: VoiceProgress) => void,
   signal: AbortSignal,
+  priority: 'high' | 'low' = 'low',
 ): Promise<{ doc: ComicDoc; error: string | null }> {
   const items = allLines(doc)
   const progress: VoiceProgress = { total: items.length, done: 0, failed: 0, current: '' }
@@ -122,15 +143,10 @@ export async function prepareVoices(
   await Promise.all(
     Array.from({ length: Math.min(workers, queue.length) }, async () => {
       for (let item = queue.shift(); item && !fatal && !signal.aborted; item = queue.shift()) {
-        const prev = items[item.i - 1]?.line
-        const next = items[item.i + 1]?.line
         progress.current = item.line.text
         onProgress({ ...progress })
         try {
-          const audio = await synthesizeLine(doc, item.line, settings, {
-            previousText: prev && prev.speakerId === item.line.speakerId ? prev.text : undefined,
-            nextText: next && next.speakerId === item.line.speakerId ? next.text : undefined,
-          })
+          const audio = await synthesizeLine(doc, item.line, settings, priority)
           results.set(item.line.id, audio)
         } catch (err) {
           const code = errorCode(err)

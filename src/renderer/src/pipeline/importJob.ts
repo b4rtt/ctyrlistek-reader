@@ -15,7 +15,7 @@ import { refineBubble } from '../cv/bubbles'
 import { detectPanels } from '../cv/panels'
 import { rasterize } from '../cv/raster'
 import { openPdf, renderPage } from '../pdf/render'
-import { aiImage, cropImage, encodeJpeg, loadPageBitmap, overlayImage } from './images'
+import { aiImage, cropImage, encodeJpeg, loadPageBitmap, overlayImage, scaled } from './images'
 
 export type JobPhase = 'rendering' | 'analyzing' | 'consolidating' | 'done' | 'error' | 'cancelled'
 
@@ -138,10 +138,17 @@ export class ImportJob {
         if (this.cancelled) return
         const canvas = await renderPage(pdf, i, PAGE_MAX_SIDE)
         const rel = await api.library.writePage(this.doc.meta.id, i, await encodeJpeg(canvas, 0.9))
+        const thumb = await api.library.writePage(
+          this.doc.meta.id,
+          i,
+          await encodeJpeg(scaled(canvas, 480), 0.82),
+          'thumb',
+        )
         const candidates = detectPanels(rasterize(canvas, 1000))
         pages.push({
           index: i,
           image: rel,
+          thumb,
           width: canvas.width,
           height: canvas.height,
           kind: 'comic',
@@ -155,7 +162,11 @@ export class ImportJob {
         this.set({ rendered: i + 1 })
         if (i === 0 || i % 4 === 3) {
           this.doc.pages = [...pages]
-          this.doc.meta = { ...this.doc.meta, pageCount: pdf.numPages, cover: pages[0].image }
+          this.doc.meta = {
+            ...this.doc.meta,
+            pageCount: pdf.numPages,
+            cover: pages[0].thumb ?? pages[0].image,
+          }
           await this.save()
         }
       }
@@ -163,7 +174,7 @@ export class ImportJob {
       this.doc.meta = {
         ...this.doc.meta,
         pageCount: pdf.numPages,
-        cover: pages[0]?.image ?? null,
+        cover: pages[0]?.thumb ?? pages[0]?.image ?? null,
         stage: 'analyzing',
       }
       await this.save()

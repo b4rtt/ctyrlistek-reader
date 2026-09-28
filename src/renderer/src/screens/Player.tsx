@@ -262,7 +262,10 @@ export function Player({ id }: { id: string }): React.JSX.Element {
       onClick={() => setMenu(false)}
       style={{ '--char': color } as React.CSSProperties}
     >
-      <div className="backdrop" style={{ backgroundImage: `url("${assetUrl(doc.meta.id, page.image)}")` }} />
+      <div
+        className="backdrop"
+        style={{ backgroundImage: `url("${assetUrl(doc.meta.id, page.thumb ?? page.image)}")` }}
+      />
       <div className="stage" ref={stageRef}>
         <div
           key={page.index}

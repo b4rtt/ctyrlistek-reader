@@ -228,12 +228,15 @@ export interface SynthesizeRequest {
   }
   previousText?: string
   nextText?: string
+  /** `high` = the player needs it now; `low` = background pre-generation. */
+  priority?: 'high' | 'low'
 }
 
 export interface SfxRequest {
   comicId: string
   prompt: string
   text: string
+  priority?: 'high' | 'low'
 }
 
 // --------------------------------------------------------------------- api --
@@ -252,7 +255,7 @@ export interface AppApi {
     load(id: string): Promise<ComicDoc>
     save(doc: ComicDoc): Promise<ComicDoc>
     remove(id: string): Promise<void>
-    writePage(id: string, index: number, jpeg: Uint8Array): Promise<string>
+    writePage(id: string, index: number, jpeg: Uint8Array, variant?: 'page' | 'thumb'): Promise<string>
     readSource(id: string): Promise<Uint8Array>
     reveal(id: string | null): Promise<void>
   }

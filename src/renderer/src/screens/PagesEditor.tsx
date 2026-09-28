@@ -141,7 +141,7 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
           <div
             key={p.index}
             className={`page-thumb ${p.status} ${p.index === page.index ? 'sel' : ''} ${p.skip ? 'skipped' : ''}`}
-            style={{ backgroundImage: `url("${assetUrl(doc.meta.id, p.image)}")` }}
+            style={{ backgroundImage: `url("${assetUrl(doc.meta.id, p.thumb ?? p.image)}")` }}
             onClick={() => setPageIndex(p.index)}
             title={p.error ?? `Strana ${p.index + 1}`}
           >

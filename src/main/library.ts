@@ -99,8 +99,13 @@ export async function createComic(title: string, pdf: Uint8Array): Promise<Comic
   return doc
 }
 
-export async function writePage(id: string, index: number, jpeg: Uint8Array): Promise<string> {
-  const rel = `pages/p${String(index + 1).padStart(3, '0')}.jpg`
+export async function writePage(
+  id: string,
+  index: number,
+  jpeg: Uint8Array,
+  variant: 'page' | 'thumb' = 'page',
+): Promise<string> {
+  const rel = `pages/${variant === 'thumb' ? 't' : 'p'}${String(index + 1).padStart(3, '0')}.jpg`
   await fs.writeFile(comicAsset(id, rel), jpeg)
   return rel
 }
