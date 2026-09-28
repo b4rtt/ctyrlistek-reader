@@ -22,7 +22,12 @@ export const DEFAULT_SETTINGS: Settings = {
 
 /** `price` = USD per 1M input / output tokens (for cost estimates only). */
 export const OPENAI_MODELS: { id: string; label: string; hint: string; price: [number, number] }[] = [
-  { id: 'gpt-6-sol', label: 'GPT-6 Sol', hint: 'Doporučeno – skvělá přesnost za rozumnou cenu', price: [2, 10] },
+  {
+    id: 'gpt-6-sol',
+    label: 'GPT-6 Sol',
+    hint: 'Doporučeno – skvělá přesnost za rozumnou cenu',
+    price: [2, 10],
+  },
   { id: 'gpt-6-astra', label: 'GPT-6 Astra', hint: 'Nejvyšší kvalita, zhruba 5× dražší', price: [10, 50] },
   { id: 'gpt-6-luna', label: 'GPT-6 Luna', hint: 'Nejlevnější, méně přesné čtení', price: [0.1, 0.5] },
 ]

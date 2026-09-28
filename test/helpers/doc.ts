@@ -71,5 +71,12 @@ export function aiChar(key: string, name: string, patch: Partial<AiCharacter> = 
 }
 
 export function result(panels: AnalyzePageResult['panels'], characters: AiCharacter[]): AnalyzePageResult {
-  return { pageKind: 'comic', panels, characters, notes: '', usage: { inputTokens: 10, outputTokens: 5 }, model: 'test' }
+  return {
+    pageKind: 'comic',
+    panels,
+    characters,
+    notes: '',
+    usage: { inputTokens: 10, outputTokens: 5 },
+    model: 'test',
+  }
 }

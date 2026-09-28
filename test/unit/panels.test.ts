@@ -16,7 +16,12 @@ describe('detectPanels', () => {
     panel(img, 310, 400, 260, 370)
     const found = detectPanels(img)
     expect(found).toHaveLength(4)
-    const expected = [norm(30, 30, 260, 350), norm(310, 30, 260, 350), norm(30, 400, 260, 370), norm(310, 400, 260, 370)]
+    const expected = [
+      norm(30, 30, 260, 350),
+      norm(310, 30, 260, 350),
+      norm(30, 400, 260, 370),
+      norm(310, 400, 260, 370),
+    ]
     found.forEach((r, i) => expect(iou(r, expected[i])).toBeGreaterThan(0.95))
   })
 

@@ -37,7 +37,12 @@ function move<T>(arr: T[], from: number, to: number): T[] {
 
 export function PagesEditor({ doc, settings, update, reload, flush }: Props): React.JSX.Element {
   const toast = useToast()
-  const [pageIndex, setPageIndex] = useState(() => Math.max(0, doc.pages.findIndex((p) => p.status !== 'done')))
+  const [pageIndex, setPageIndex] = useState(() =>
+    Math.max(
+      0,
+      doc.pages.findIndex((p) => p.status !== 'done'),
+    ),
+  )
   const [panelIndex, setPanelIndex] = useState(0)
   const [lineId, setLineId] = useState<string | null>(null)
   const [reanalyzing, setReanalyzing] = useState(false)
@@ -157,7 +162,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
             <div
               key={pn.id}
               className={`box panel ${i === panelIndex ? 'sel' : ''}`}
-              style={{ left: `${pn.rect.x * 100}%`, top: `${pn.rect.y * 100}%`, width: `${pn.rect.w * 100}%`, height: `${pn.rect.h * 100}%` }}
+              style={{
+                left: `${pn.rect.x * 100}%`,
+                top: `${pn.rect.y * 100}%`,
+                width: `${pn.rect.w * 100}%`,
+                height: `${pn.rect.h * 100}%`,
+              }}
               onClick={() => {
                 setPanelIndex(i)
                 setLineId(null)
@@ -192,13 +202,25 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
             <b className="grow">Strana {page.index + 1}</b>
             {page.status === 'error' && <span className="badge danger">Chyba</span>}
             {page.kind !== 'comic' && page.status === 'done' && (
-              <span className="badge">{page.kind === 'cover' ? 'Obálka' : page.kind === 'text' ? 'Text' : 'Jiné'}</span>
+              <span className="badge">
+                {page.kind === 'cover' ? 'Obálka' : page.kind === 'text' ? 'Text' : 'Jiné'}
+              </span>
             )}
           </div>
-          {page.error && <div className="small" style={{ color: 'var(--danger)' }}>{page.error}</div>}
+          {page.error && (
+            <div className="small" style={{ color: 'var(--danger)' }}>
+              {page.error}
+            </div>
+          )}
           <div className="row wrap">
             <label className="switch small">
-              <input type="checkbox" checked={!page.skip} onChange={(e) => update((d) => mapPage(d, page.index, (p) => ({ ...p, skip: !e.target.checked })))} />
+              <input
+                type="checkbox"
+                checked={!page.skip}
+                onChange={(e) =>
+                  update((d) => mapPage(d, page.index, (p) => ({ ...p, skip: !e.target.checked })))
+                }
+              />
               Přehrávat tuto stranu
             </label>
             <div className="grow" />
@@ -218,7 +240,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
               title="Posunout okénko dřív"
               disabled={panelIndex === 0}
               onClick={() => {
-                update((d) => mapPage(d, page.index, (p) => ({ ...p, panels: move(p.panels, panelIndex, panelIndex - 1) })))
+                update((d) =>
+                  mapPage(d, page.index, (p) => ({
+                    ...p,
+                    panels: move(p.panels, panelIndex, panelIndex - 1),
+                  })),
+                )
                 setPanelIndex(panelIndex - 1)
               }}
             >
@@ -229,7 +256,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
               title="Posunout okénko později"
               disabled={panelIndex >= page.panels.length - 1}
               onClick={() => {
-                update((d) => mapPage(d, page.index, (p) => ({ ...p, panels: move(p.panels, panelIndex, panelIndex + 1) })))
+                update((d) =>
+                  mapPage(d, page.index, (p) => ({
+                    ...p,
+                    panels: move(p.panels, panelIndex, panelIndex + 1),
+                  })),
+                )
                 setPanelIndex(panelIndex + 1)
               }}
             >
@@ -264,7 +296,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
                     </option>
                   ))}
                 </select>
-                <button className="btn small icon" title="Přehrát" onClick={() => void preview(l)} disabled={!l.text.trim()}>
+                <button
+                  className="btn small icon"
+                  title="Přehrát"
+                  onClick={() => void preview(l)}
+                  disabled={!l.text.trim()}
+                >
                   {playing === l.id ? <span className="spinner" /> : <Icon name="volume" size={16} />}
                 </button>
               </div>
@@ -275,7 +312,9 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
                 onChange={(e) => editLine(l.id, { text: e.target.value })}
                 aria-label="Text repliky"
               />
-              {l.originalText && l.originalText !== l.text && <div className="original">{l.originalText}</div>}
+              {l.originalText && l.originalText !== l.text && (
+                <div className="original">{l.originalText}</div>
+              )}
               <div className="grid2">
                 <select
                   className="input"
@@ -284,7 +323,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
                     const kind = e.target.value as LineKind
                     editLine(l.id, {
                       kind,
-                      speakerId: kind === 'narration' ? NARRATOR_ID : kind === 'sfx' ? null : (l.speakerId ?? NARRATOR_ID),
+                      speakerId:
+                        kind === 'narration'
+                          ? NARRATOR_ID
+                          : kind === 'sfx'
+                            ? null
+                            : (l.speakerId ?? NARRATOR_ID),
                       sfxPrompt: kind === 'sfx' ? (l.sfxPrompt ?? l.text) : null,
                     })
                   }}
@@ -332,7 +376,12 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
                 </select>
               </div>
               <div className="row">
-                <button className="btn small ghost icon" title="Dřív" disabled={li === 0} onClick={() => editPanelLines((ls) => move(ls, li, li - 1))}>
+                <button
+                  className="btn small ghost icon"
+                  title="Dřív"
+                  disabled={li === 0}
+                  onClick={() => editPanelLines((ls) => move(ls, li, li - 1))}
+                >
                   <Icon name="up" size={16} />
                 </button>
                 <button
@@ -344,7 +393,10 @@ export function PagesEditor({ doc, settings, update, reload, flush }: Props): Re
                   <Icon name="down" size={16} />
                 </button>
                 <div className="grow" />
-                <button className="btn small ghost danger" onClick={() => editPanelLines((ls) => ls.filter((x) => x.id !== l.id))}>
+                <button
+                  className="btn small ghost danger"
+                  onClick={() => editPanelLines((ls) => ls.filter((x) => x.id !== l.id))}
+                >
                   <Icon name="trash" size={16} /> Smazat
                 </button>
               </div>

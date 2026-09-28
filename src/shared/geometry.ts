@@ -56,7 +56,11 @@ export function clampUnit(r: Rect): Rect | null {
 }
 
 /** Convert a pixel box `[x0, y0, x1, y1]` in an image of size `w×h` into a normalized rect. */
-export function boxToRect(box: { x0: number; y0: number; x1: number; y1: number }, w: number, h: number): Rect | null {
+export function boxToRect(
+  box: { x0: number; y0: number; x1: number; y1: number },
+  w: number,
+  h: number,
+): Rect | null {
   const x0 = Math.min(box.x0, box.x1)
   const x1 = Math.max(box.x0, box.x1)
   const y0 = Math.min(box.y0, box.y1)

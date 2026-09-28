@@ -103,7 +103,10 @@ function improveCharacter(ch: Character, ai: AiCharacter, page: number): Charact
       next.name = ai.name.trim()
       next.nameConfidence = ai.nameConfidence
     }
-    if (ai.gender !== 'unknown' && (ch.gender === 'unknown' || CONFIDENCE_RANK[ai.genderConfidence] > CONFIDENCE_RANK[ch.genderConfidence])) {
+    if (
+      ai.gender !== 'unknown' &&
+      (ch.gender === 'unknown' || CONFIDENCE_RANK[ai.genderConfidence] > CONFIDENCE_RANK[ch.genderConfidence])
+    ) {
       next.gender = ai.gender
       next.genderConfidence = ai.genderConfidence
     }
@@ -121,7 +124,11 @@ function improveCharacter(ch: Character, ai: AiCharacter, page: number): Charact
  * Resolve the AI's character keys for one page to document character ids,
  * creating new characters where needed. Mutates `doc.characters`.
  */
-export function resolveCharacters(doc: ComicDoc, pageIndex: number, result: AnalyzePageResult): Map<string, string> {
+export function resolveCharacters(
+  doc: ComicDoc,
+  pageIndex: number,
+  result: AnalyzePageResult,
+): Map<string, string> {
   const map = new Map<string, string>()
   const byId = new Map(doc.characters.map((c) => [c.id, c]))
   const byName = new Map(doc.characters.map((c) => [normalizeName(c.name), c]))
@@ -153,7 +160,11 @@ export function resolveCharacters(doc: ComicDoc, pageIndex: number, result: Anal
 }
 
 /** Pick the panel rectangle: the locally detected one when the AI confirmed it. */
-export function choosePanelRect(aiRect: Rect, label: string | null, candidates: { label: string; rect: Rect }[]): Rect {
+export function choosePanelRect(
+  aiRect: Rect,
+  label: string | null,
+  candidates: { label: string; rect: Rect }[],
+): Rect {
   const byLabel = label ? candidates.find((c) => c.label === label) : undefined
   if (byLabel && iou(byLabel.rect, aiRect) > 0.3) return byLabel.rect
   // The AI may have mislabelled – snap to the best overlapping candidate.
@@ -176,7 +187,12 @@ export interface ApplyOptions {
 }
 
 /** Write one page's AI result into the document. Mutates and returns `doc`. */
-export function applyPageResult(doc: ComicDoc, pageIndex: number, result: AnalyzePageResult, opts: ApplyOptions): ComicDoc {
+export function applyPageResult(
+  doc: ComicDoc,
+  pageIndex: number,
+  result: AnalyzePageResult,
+  opts: ApplyOptions,
+): ComicDoc {
   const idMap = resolveCharacters(doc, pageIndex, result)
   const unknownFallback = (): string => {
     const existing = doc.characters.find((c) => c.id === 'neznamy')
@@ -214,7 +230,10 @@ export function applyPageResult(doc: ComicDoc, pageIndex: number, result: Analyz
       .map((l, li) => {
         let speakerId: string | null = null
         if (l.kind === 'narration') speakerId = NARRATOR_ID
-        else if (l.kind !== 'sfx') speakerId = idMap.get(l.speaker) ?? (doc.characters.some((c) => c.id === l.speaker) ? l.speaker : unknownFallback())
+        else if (l.kind !== 'sfx')
+          speakerId =
+            idMap.get(l.speaker) ??
+            (doc.characters.some((c) => c.id === l.speaker) ? l.speaker : unknownFallback())
         const bubble = l.bubble && opts.refineBubble ? opts.refineBubble(l.bubble) : l.bubble
         return {
           id: `p${pageIndex}-${pi}-${li}-${Math.random().toString(36).slice(2, 7)}`,
@@ -242,7 +261,10 @@ export function applyPageResult(doc: ComicDoc, pageIndex: number, result: Analyz
           status: 'done',
           error: null,
           panels,
-          skip: result.pageKind === 'text' || result.pageKind === 'other' ? pg.skip || panels.every((p) => p.lines.length === 0) : pg.skip,
+          skip:
+            result.pageKind === 'text' || result.pageKind === 'other'
+              ? pg.skip || panels.every((p) => p.lines.length === 0)
+              : pg.skip,
         }
       : pg,
   )
@@ -271,10 +293,14 @@ export function mergeCharacters(doc: ComicDoc, into: string, from: string[]): Co
     ...pg,
     panels: pg.panels.map((p) => ({
       ...p,
-      lines: p.lines.map((l) => (l.speakerId && drop.has(l.speakerId) ? { ...l, speakerId: into, audio: null } : l)),
+      lines: p.lines.map((l) =>
+        l.speakerId && drop.has(l.speakerId) ? { ...l, speakerId: into, audio: null } : l,
+      ),
     })),
   }))
-  doc.characters = doc.characters.filter((c) => !drop.has(c.id)).map((c) => (c.id === into ? { ...c, thumb } : c))
+  doc.characters = doc.characters
+    .filter((c) => !drop.has(c.id))
+    .map((c) => (c.id === into ? { ...c, thumb } : c))
   recountLines(doc)
   return doc
 }

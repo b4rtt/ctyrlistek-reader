@@ -38,7 +38,11 @@ export async function pdfTitle(doc: PdfDocument): Promise<string | null> {
  * Render a page so its longer side is at most `maxSide` px (never upscaling
  * more than 4× the PDF's nominal size).
  */
-export async function renderPage(doc: PdfDocument, index: number, maxSide: number): Promise<HTMLCanvasElement> {
+export async function renderPage(
+  doc: PdfDocument,
+  index: number,
+  maxSide: number,
+): Promise<HTMLCanvasElement> {
   const page = await doc.getPage(index + 1)
   try {
     const base = page.getViewport({ scale: 1 })

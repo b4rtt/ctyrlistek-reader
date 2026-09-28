@@ -16,7 +16,12 @@ interface Fill {
   leaked: boolean
 }
 
-function floodFrom(img: Raster, seed: number, win: { x0: number; y0: number; x1: number; y1: number }, visited: Uint8Array): Fill {
+function floodFrom(
+  img: Raster,
+  seed: number,
+  win: { x0: number; y0: number; x1: number; y1: number },
+  visited: Uint8Array,
+): Fill {
   const { width: w, data } = img
   const i = seed * 4
   const r = data[i]

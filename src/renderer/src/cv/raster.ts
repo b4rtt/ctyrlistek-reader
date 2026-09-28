@@ -16,7 +16,10 @@ export function colorDist(data: Uint8ClampedArray, p: number, r: number, g: numb
 }
 
 /** Draw any canvas image source into a raster no larger than `maxSide`. */
-export function rasterize(source: CanvasImageSource & { width: number; height: number }, maxSide: number): Raster {
+export function rasterize(
+  source: CanvasImageSource & { width: number; height: number },
+  maxSide: number,
+): Raster {
   const scale = Math.min(1, maxSide / Math.max(source.width, source.height))
   const width = Math.max(1, Math.round(source.width * scale))
   const height = Math.max(1, Math.round(source.height * scale))

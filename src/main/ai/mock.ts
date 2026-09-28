@@ -16,15 +16,63 @@ import type {
 } from '@shared/api'
 import type { Delivery, Emotion, Intensity } from '@shared/types'
 
-const SCRIPT: { speaker: string; text: string; emotion: Emotion; intensity: Intensity; delivery: Delivery }[] = [
-  { speaker: 'myspulin', text: 'Mám nápad! Postavíme létající kolo.', emotion: 'excited', intensity: 2, delivery: 'normal' },
-  { speaker: 'bobik', text: 'Létající kolo? A bude mít košík na buchty?', emotion: 'curious', intensity: 2, delivery: 'normal' },
-  { speaker: 'pinda', text: 'Já se bojím výšek… nemůžeme radši jet po zemi?', emotion: 'scared', intensity: 2, delivery: 'normal' },
-  { speaker: 'fifinka', text: 'Neboj, Pinďo. Budeme opatrní.', emotion: 'calm', intensity: 1, delivery: 'normal' },
-  { speaker: 'new_soused', text: 'Co to tady zase vyvádíte?!', emotion: 'angry', intensity: 3, delivery: 'shout' },
+const SCRIPT: {
+  speaker: string
+  text: string
+  emotion: Emotion
+  intensity: Intensity
+  delivery: Delivery
+}[] = [
+  {
+    speaker: 'myspulin',
+    text: 'Mám nápad! Postavíme létající kolo.',
+    emotion: 'excited',
+    intensity: 2,
+    delivery: 'normal',
+  },
+  {
+    speaker: 'bobik',
+    text: 'Létající kolo? A bude mít košík na buchty?',
+    emotion: 'curious',
+    intensity: 2,
+    delivery: 'normal',
+  },
+  {
+    speaker: 'pinda',
+    text: 'Já se bojím výšek… nemůžeme radši jet po zemi?',
+    emotion: 'scared',
+    intensity: 2,
+    delivery: 'normal',
+  },
+  {
+    speaker: 'fifinka',
+    text: 'Neboj, Pinďo. Budeme opatrní.',
+    emotion: 'calm',
+    intensity: 1,
+    delivery: 'normal',
+  },
+  {
+    speaker: 'new_soused',
+    text: 'Co to tady zase vyvádíte?!',
+    emotion: 'angry',
+    intensity: 3,
+    delivery: 'shout',
+  },
   { speaker: 'bobik', text: 'Pst, soused se zlobí.', emotion: 'worried', intensity: 1, delivery: 'whisper' },
-  { speaker: 'myspulin', text: 'Tři, dva, jedna… start!', emotion: 'excited', intensity: 3, delivery: 'loud' },
-  { speaker: 'pinda', text: 'Hurá, letíme! To je nádhera!', emotion: 'happy', intensity: 3, delivery: 'loud' },
+  {
+    speaker: 'myspulin',
+    text: 'Tři, dva, jedna… start!',
+    emotion: 'excited',
+    intensity: 3,
+    delivery: 'loud',
+  },
+  {
+    speaker: 'pinda',
+    text: 'Hurá, letíme! To je nádhera!',
+    emotion: 'happy',
+    intensity: 3,
+    delivery: 'loud',
+  },
 ]
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))

@@ -14,7 +14,8 @@ function KeyField({ kind, view }: { kind: SecretKind; view: SettingsView }): Rea
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
   const source = kind === 'openai' ? view.openaiKey : view.elevenKey
   const label = kind === 'openai' ? 'OpenAI API klíč' : 'ElevenLabs API klíč'
-  const link = kind === 'openai' ? 'https://platform.openai.com/api-keys' : 'https://elevenlabs.io/app/settings/api-keys'
+  const link =
+    kind === 'openai' ? 'https://platform.openai.com/api-keys' : 'https://elevenlabs.io/app/settings/api-keys'
 
   const save = async (): Promise<void> => {
     setBusy(true)
@@ -45,7 +46,13 @@ function KeyField({ kind, view }: { kind: SecretKind; view: SettingsView }): Rea
         <input
           className="input"
           type="password"
-          placeholder={source === 'stored' ? '•••••••• (uloženo)' : source === 'env' ? 'načteno z proměnné prostředí' : 'Vložte klíč'}
+          placeholder={
+            source === 'stored'
+              ? '•••••••• (uloženo)'
+              : source === 'env'
+                ? 'načteno z proměnné prostředí'
+                : 'Vložte klíč'
+          }
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && value && void save()}
@@ -69,8 +76,14 @@ function KeyField({ kind, view }: { kind: SecretKind; view: SettingsView }): Rea
           <span style={{ color: result.ok ? 'var(--accent)' : 'var(--danger)' }}>{result.message}</span>
         ) : (
           <span className="faint">
-            Klíč získáte na <a href={link} target="_blank" rel="noreferrer">{new URL(link).host}</a>.{' '}
-            {view.secureStorage ? 'Ukládá se šifrovaně do klíčenky systému.' : 'Pozor: systémové šifrování není dostupné.'}
+            Klíč získáte na{' '}
+            <a href={link} target="_blank" rel="noreferrer">
+              {new URL(link).host}
+            </a>
+            .{' '}
+            {view.secureStorage
+              ? 'Ukládá se šifrovaně do klíčenky systému.'
+              : 'Pozor: systémové šifrování není dostupné.'}
           </span>
         )}
       </div>
@@ -78,7 +91,12 @@ function KeyField({ kind, view }: { kind: SecretKind; view: SettingsView }): Rea
   )
 }
 
-export function SettingsDialog({ onClose }: { focus: string; onClose: () => void }): React.JSX.Element | null {
+export function SettingsDialog({
+  onClose,
+}: {
+  focus: string
+  onClose: () => void
+}): React.JSX.Element | null {
   const s = useSettings()
   const voices = useVoices(!!s?.elevenKey)
   if (!s) return null
@@ -100,13 +118,19 @@ export function SettingsDialog({ onClose }: { focus: string; onClose: () => void
         <div className="row wrap" style={{ alignItems: 'flex-end' }}>
           <label className="field grow">
             <span>Model</span>
-            <select className="input" value={s.openaiModel} onChange={(e) => set({ openaiModel: e.target.value })}>
+            <select
+              className="input"
+              value={s.openaiModel}
+              onChange={(e) => set({ openaiModel: e.target.value })}
+            >
               {OPENAI_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label} – {m.hint}
                 </option>
               ))}
-              {!OPENAI_MODELS.some((m) => m.id === s.openaiModel) && <option value={s.openaiModel}>{s.openaiModel}</option>}
+              {!OPENAI_MODELS.some((m) => m.id === s.openaiModel) && (
+                <option value={s.openaiModel}>{s.openaiModel}</option>
+              )}
             </select>
           </label>
           <label className="field">
@@ -153,7 +177,11 @@ export function SettingsDialog({ onClose }: { focus: string; onClose: () => void
             <div className="row wrap" style={{ alignItems: 'flex-end' }}>
               <label className="field grow">
                 <span>Model hlasu</span>
-                <select className="input" value={s.elevenModel} onChange={(e) => set({ elevenModel: e.target.value })}>
+                <select
+                  className="input"
+                  value={s.elevenModel}
+                  onChange={(e) => set({ elevenModel: e.target.value })}
+                >
                   {ELEVEN_MODELS.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.label} – {m.hint}
@@ -175,19 +203,29 @@ export function SettingsDialog({ onClose }: { focus: string; onClose: () => void
               </label>
             </div>
             <label className="switch">
-              <input type="checkbox" checked={s.sfxEnabled} onChange={(e) => set({ sfxEnabled: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={s.sfxEnabled}
+                onChange={(e) => set({ sfxEnabled: e.target.checked })}
+              />
               Zvukové efekty (BUM!, PRÁSK!) generované ElevenLabs
             </label>
             <p className="small faint" style={{ margin: 0 }}>
-              Tip: Nejlépe znějí hlasy s ověřenou češtinou. Přidejte si je do účtu z ElevenLabs Voice Library a aplikace je
-              při obsazování upřednostní. Dostupných hlasů: {voices.eleven.length}
-              {voices.eleven.length > 0 && ` (s češtinou: ${voices.eleven.filter((v) => v.languages.includes('cs')).length})`}.
+              Tip: Nejlépe znějí hlasy s ověřenou češtinou. Přidejte si je do účtu z ElevenLabs Voice Library
+              a aplikace je při obsazování upřednostní. Dostupných hlasů: {voices.eleven.length}
+              {voices.eleven.length > 0 &&
+                ` (s češtinou: ${voices.eleven.filter((v) => v.languages.includes('cs')).length})`}
+              .
             </p>
           </>
         ) : (
           <label className="field">
             <span>Systémový hlas</span>
-            <select className="input" value={s.systemVoice} onChange={(e) => set({ systemVoice: e.target.value })}>
+            <select
+              className="input"
+              value={s.systemVoice}
+              onChange={(e) => set({ systemVoice: e.target.value })}
+            >
               {voices.system.length === 0 && <option value={s.systemVoice}>{s.systemVoice}</option>}
               {voices.system.map((v) => (
                 <option key={v.name} value={v.name}>
@@ -195,9 +233,12 @@ export function SettingsDialog({ onClose }: { focus: string; onClose: () => void
                 </option>
               ))}
             </select>
-            <span className="small faint" style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
-              Kvalitnější českou „Zuzanu (Vylepšená)“ stáhnete v Nastavení systému → Zpřístupnění → Mluvený obsah → Systémový
-              hlas → Spravovat hlasy.
+            <span
+              className="small faint"
+              style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}
+            >
+              Kvalitnější českou „Zuzanu (Vylepšená)“ stáhnete v Nastavení systému → Zpřístupnění → Mluvený
+              obsah → Systémový hlas → Spravovat hlasy.
             </span>
           </label>
         )}
@@ -208,24 +249,50 @@ export function SettingsDialog({ onClose }: { focus: string; onClose: () => void
           <Icon name="play" /> Přehrávání
         </h3>
         <label className="switch">
-          <input type="checkbox" checked={s.subtitles} onChange={(e) => set({ subtitles: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={s.subtitles}
+            onChange={(e) => set({ subtitles: e.target.checked })}
+          />
           Titulky s textem repliky
         </label>
         <label className="switch">
-          <input type="checkbox" checked={s.wordHighlight} onChange={(e) => set({ wordHighlight: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={s.wordHighlight}
+            onChange={(e) => set({ wordHighlight: e.target.checked })}
+          />
           Zvýrazňovat právě čtené slovo (pomáhá při učení čtení)
         </label>
         <label className="switch">
-          <input type="checkbox" checked={s.pageIntro} onChange={(e) => set({ pageIntro: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={s.pageIntro}
+            onChange={(e) => set({ pageIntro: e.target.checked })}
+          />
           Na začátku každé stránky ukázat celou stránku
         </label>
         <label className="field">
           <span>Tempo mezi replikami: {s.pace < 0.9 ? 'rychlé' : s.pace > 1.2 ? 'pomalé' : 'normální'}</span>
-          <input type="range" min={0.6} max={1.8} step={0.1} value={s.pace} onChange={(e) => set({ pace: Number(e.target.value) })} />
+          <input
+            type="range"
+            min={0.6}
+            max={1.8}
+            step={0.1}
+            value={s.pace}
+            onChange={(e) => set({ pace: Number(e.target.value) })}
+          />
         </label>
         <label className="field">
           <span>Hlasitost zvukových efektů: {Math.round(s.sfxVolume * 100)} %</span>
-          <input type="range" min={0} max={1} step={0.05} value={s.sfxVolume} onChange={(e) => set({ sfxVolume: Number(e.target.value) })} />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={s.sfxVolume}
+            onChange={(e) => set({ sfxVolume: Number(e.target.value) })}
+          />
         </label>
       </section>
 

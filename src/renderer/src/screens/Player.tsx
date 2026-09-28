@@ -13,7 +13,10 @@ import { PlayerController, type PlayerState } from '../player/controller'
 import { castVoices } from '../pipeline/voices'
 
 /** Make sure every speaking character has a voice; fall back to system voices if ElevenLabs is unavailable. */
-async function prepareDoc(doc: ComicDoc, settings: Settings): Promise<{ doc: ComicDoc; settings: Settings; notice: string | null }> {
+async function prepareDoc(
+  doc: ComicDoc,
+  settings: Settings,
+): Promise<{ doc: ComicDoc; settings: Settings; notice: string | null }> {
   let notice: string | null = null
   let effective = settings
   let voices: Awaited<ReturnType<typeof api.voices.listEleven>> = []
@@ -27,12 +30,24 @@ async function prepareDoc(doc: ComicDoc, settings: Settings): Promise<{ doc: Com
     }
   }
   const cast = castVoices(doc, effective, voices)
-  const changed = cast.characters.some((c, i) => c.voice.elevenVoiceId !== doc.characters[i]?.voice.elevenVoiceId)
+  const changed = cast.characters.some(
+    (c, i) => c.voice.elevenVoiceId !== doc.characters[i]?.voice.elevenVoiceId,
+  )
   const next = changed ? await api.library.save(cast) : cast
   return { doc: next, settings: effective, notice }
 }
 
-function Words({ text, words, current, highlight }: { text: string; words: { start: number; end: number }[] | null; current: number; highlight: boolean }): React.JSX.Element {
+function Words({
+  text,
+  words,
+  current,
+  highlight,
+}: {
+  text: string
+  words: { start: number; end: number }[] | null
+  current: number
+  highlight: boolean
+}): React.JSX.Element {
   if (!highlight || !words || words.length === 0) return <>{text}</>
   const out: React.ReactNode[] = []
   let pos = 0
@@ -122,7 +137,9 @@ export function Player({ id }: { id: string }): React.JSX.Element {
   useLayoutEffect(() => {
     const el = stageRef.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => setVp({ width: e.contentRect.width, height: e.contentRect.height }))
+    const ro = new ResizeObserver(([e]) =>
+      setVp({ width: e.contentRect.width, height: e.contentRect.height }),
+    )
     ro.observe(el)
     return () => ro.disconnect()
   }, [doc])
@@ -205,7 +222,12 @@ export function Player({ id }: { id: string }): React.JSX.Element {
     const page = doc.pages[state.camera.page]
     if (!page) return null
     // Constant margins: the page must not jump when the controls fade out.
-    return frame(state.camera.rect, page.width, page.height, { width: vp.width, height: vp.height, top: 40, bottom: subtitles ? 150 : 100 })
+    return frame(state.camera.rect, page.width, page.height, {
+      width: vp.width,
+      height: vp.height,
+      top: 40,
+      bottom: subtitles ? 150 : 100,
+    })
   }, [doc, state, vp, subtitles])
 
   if (!doc || !state || !framing) {
@@ -280,7 +302,12 @@ export function Player({ id }: { id: string }): React.JSX.Element {
             <div
               key={p.id}
               className="hit"
-              style={{ left: `${p.rect.x * 100}%`, top: `${p.rect.y * 100}%`, width: `${p.rect.w * 100}%`, height: `${p.rect.h * 100}%` }}
+              style={{
+                left: `${p.rect.x * 100}%`,
+                top: `${p.rect.y * 100}%`,
+                width: `${p.rect.w * 100}%`,
+                height: `${p.rect.h * 100}%`,
+              }}
               onClick={(e) => {
                 e.stopPropagation()
                 c.goToPanel(page.index, pi)
@@ -320,7 +347,12 @@ export function Player({ id }: { id: string }): React.JSX.Element {
                 <span>{speaker?.name ?? ''}</span>
               </div>
               <div className="text grow">
-                <Words text={line.text} words={state.words} current={state.word} highlight={liveSettings?.wordHighlight ?? true} />
+                <Words
+                  text={line.text}
+                  words={state.words}
+                  current={state.word}
+                  highlight={liveSettings?.wordHighlight ?? true}
+                />
               </div>
               {line.emotion !== 'neutral' && <div className="emo">{EMOTION_META[line.emotion].emoji}</div>}
             </>
@@ -343,7 +375,11 @@ export function Player({ id }: { id: string }): React.JSX.Element {
           <div className="title">{doc.meta.title}</div>
           <button
             className="round sm"
-            onClick={() => (document.fullscreenElement ? void document.exitFullscreen() : void document.documentElement.requestFullscreen())}
+            onClick={() =>
+              document.fullscreenElement
+                ? void document.exitFullscreen()
+                : void document.documentElement.requestFullscreen()
+            }
             title="Celá obrazovka (F)"
           >
             <Icon name="expand" />
@@ -358,7 +394,11 @@ export function Player({ id }: { id: string }): React.JSX.Element {
               <button className="round" onClick={() => c.prev()} title="Předchozí replika (←)">
                 <Icon name="back" size={26} />
               </button>
-              <button className="round main" onClick={() => c.toggle()} title="Přehrát / pozastavit (mezerník)">
+              <button
+                className="round main"
+                onClick={() => c.toggle()}
+                title="Přehrát / pozastavit (mezerník)"
+              >
                 <Icon name={state.playing ? 'pause' : 'play'} size={34} />
               </button>
               <button className="round" onClick={() => c.next()} title="Další replika (→)">
@@ -389,10 +429,17 @@ export function Player({ id }: { id: string }): React.JSX.Element {
               }}
             >
               <div className="track">
-                <div className="fill" style={{ width: `${(state.beat / Math.max(1, c.beats.length - 1)) * 100}%` }} />
+                <div
+                  className="fill"
+                  style={{ width: `${(state.beat / Math.max(1, c.beats.length - 1)) * 100}%` }}
+                />
               </div>
               {pageTicks.map((i) => (
-                <div key={i} className="tick" style={{ left: `${(i / Math.max(1, c.beats.length - 1)) * 100}%` }} />
+                <div
+                  key={i}
+                  className="tick"
+                  style={{ left: `${(i / Math.max(1, c.beats.length - 1)) * 100}%` }}
+                />
               ))}
             </div>
             <div className="info">
@@ -414,7 +461,11 @@ export function Player({ id }: { id: string }): React.JSX.Element {
         {menu && liveSettings && (
           <div className="popover" onClick={(e) => e.stopPropagation()}>
             <label className="switch">
-              <input type="checkbox" checked={liveSettings.subtitles} onChange={(e) => void updateSettings({ subtitles: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={liveSettings.subtitles}
+                onChange={(e) => void updateSettings({ subtitles: e.target.checked })}
+              />
               Titulky
             </label>
             <label className="switch">
@@ -426,7 +477,11 @@ export function Player({ id }: { id: string }): React.JSX.Element {
               Zvýrazňovat slova
             </label>
             <label className="switch">
-              <input type="checkbox" checked={liveSettings.pageIntro} onChange={(e) => void updateSettings({ pageIntro: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={liveSettings.pageIntro}
+                onChange={(e) => void updateSettings({ pageIntro: e.target.checked })}
+              />
               Ukázat celou stránku
             </label>
             <label className="field">
@@ -457,7 +512,9 @@ export function Player({ id }: { id: string }): React.JSX.Element {
                 <Icon name="replay" /> Pokračovat od strany {(c.beats[lastBeat]?.page ?? 0) + 1}
               </button>
             )}
-            {c.beats.length === 0 && <div className="banner warn">V komiksu nejsou žádné stránky k přehrání.</div>}
+            {c.beats.length === 0 && (
+              <div className="banner warn">V komiksu nejsou žádné stránky k přehrání.</div>
+            )}
           </div>
         </div>
       )}

@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { buildElevenText, elevenVoiceSettings, systemProsody, v3Tags } from '../../src/shared/performance'
 
-const base = { kind: 'speech' as const, emotion: 'neutral' as const, intensity: 1 as const, delivery: 'normal' as const }
+const base = {
+  kind: 'speech' as const,
+  emotion: 'neutral' as const,
+  intensity: 1 as const,
+  delivery: 'normal' as const,
+}
 
 describe('v3 audio tags', () => {
   it('adds delivery and emotion tags', () => {
-    expect(v3Tags({ ...base, emotion: 'angry', intensity: 3, delivery: 'shout' })).toEqual(['shouting', 'angry'])
+    expect(v3Tags({ ...base, emotion: 'angry', intensity: 3, delivery: 'shout' })).toEqual([
+      'shouting',
+      'angry',
+    ])
     expect(v3Tags({ ...base, emotion: 'scared', delivery: 'whisper' })).toEqual(['whispers', 'nervous'])
     expect(v3Tags({ ...base, emotion: 'laughing', intensity: 3 })).toEqual(['laughs harder'])
   })
@@ -29,7 +37,11 @@ describe('voice settings', () => {
   })
   it('makes emotional v2 lines more expressive', () => {
     const calm = elevenVoiceSettings(base, 'eleven_multilingual_v2', 0.5)
-    const angry = elevenVoiceSettings({ ...base, emotion: 'angry', intensity: 3 }, 'eleven_multilingual_v2', 0.5)
+    const angry = elevenVoiceSettings(
+      { ...base, emotion: 'angry', intensity: 3 },
+      'eleven_multilingual_v2',
+      0.5,
+    )
     expect(angry.style).toBeGreaterThan(calm.style)
     expect(angry.stability).toBeLessThan(calm.stability)
   })

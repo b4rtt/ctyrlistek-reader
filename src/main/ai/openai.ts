@@ -38,7 +38,9 @@ function getClient(): OpenAI {
 /** Translate SDK errors into user-facing Czech messages with a stable code prefix. */
 export function describeOpenAIError(err: unknown): Error {
   if (err instanceof OpenAI.AuthenticationError || err instanceof OpenAI.PermissionDeniedError) {
-    return new Error(`${ERROR_CODES.AUTH}: OpenAI odmítlo klíč (${err.status}). Zkontrolujte API klíč v Nastavení.`)
+    return new Error(
+      `${ERROR_CODES.AUTH}: OpenAI odmítlo klíč (${err.status}). Zkontrolujte API klíč v Nastavení.`,
+    )
   }
   if (err instanceof OpenAI.RateLimitError) {
     const quota = /quota|billing|credit/i.test(err.message)
@@ -49,7 +51,9 @@ export function describeOpenAIError(err: unknown): Error {
     )
   }
   if (err instanceof OpenAI.NotFoundError) {
-    return new Error(`Model ${getSettings().openaiModel} není pro tento klíč dostupný. Vyberte jiný model v Nastavení.`)
+    return new Error(
+      `Model ${getSettings().openaiModel} není pro tento klíč dostupný. Vyberte jiný model v Nastavení.`,
+    )
   }
   if (err instanceof OpenAI.BadRequestError) {
     return new Error(`OpenAI požadavek odmítlo: ${err.message}`)
@@ -63,7 +67,8 @@ export function describeOpenAIError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err))
 }
 
-const dataUrl = (bytes: Uint8Array): string => `data:image/jpeg;base64,${Buffer.from(bytes).toString('base64')}`
+const dataUrl = (bytes: Uint8Array): string =>
+  `data:image/jpeg;base64,${Buffer.from(bytes).toString('base64')}`
 
 interface StructuredCall {
   instructions: string
@@ -73,7 +78,9 @@ interface StructuredCall {
   maxOutputTokens: number
 }
 
-async function structured<T>(call: StructuredCall): Promise<{ data: T; usage: { inputTokens: number; outputTokens: number }; model: string }> {
+async function structured<T>(
+  call: StructuredCall,
+): Promise<{ data: T; usage: { inputTokens: number; outputTokens: number }; model: string }> {
   const settings = getSettings()
   const openai = getClient()
   let maxOutputTokens = call.maxOutputTokens
@@ -93,19 +100,27 @@ async function structured<T>(call: StructuredCall): Promise<{ data: T; usage: { 
       throw describeOpenAIError(err)
     }
 
-    if (response.status === 'incomplete' && response.incomplete_details?.reason === 'max_output_tokens' && attempt === 0) {
+    if (
+      response.status === 'incomplete' &&
+      response.incomplete_details?.reason === 'max_output_tokens' &&
+      attempt === 0
+    ) {
       maxOutputTokens *= 2
       continue
     }
     const refusal = response.output
       .flatMap((item) => (item.type === 'message' ? item.content : []))
       .find((c) => c.type === 'refusal')
-    if (refusal && refusal.type === 'refusal') throw new Error(`AI odmítla stránku zpracovat: ${refusal.refusal}`)
+    if (refusal && refusal.type === 'refusal')
+      throw new Error(`AI odmítla stránku zpracovat: ${refusal.refusal}`)
     const text = response.output_text
     if (!text) throw new Error(`AI nevrátila žádná data (stav: ${response.status ?? 'neznámý'}).`)
     return {
       data: JSON.parse(text) as T,
-      usage: { inputTokens: response.usage?.input_tokens ?? 0, outputTokens: response.usage?.output_tokens ?? 0 },
+      usage: {
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+      },
       model: response.model,
     }
   }
@@ -151,7 +166,9 @@ interface RawConsolidate {
 }
 
 export async function consolidateOpenAI(req: ConsolidateRequest): Promise<ConsolidateResult> {
-  const content: OpenAI.Responses.ResponseInputContent[] = [{ type: 'input_text', text: consolidateUserText(req) }]
+  const content: OpenAI.Responses.ResponseInputContent[] = [
+    { type: 'input_text', text: consolidateUserText(req) },
+  ]
   for (const c of req.characters) {
     if (!c.thumb) continue
     content.push(
@@ -171,7 +188,10 @@ export async function consolidateOpenAI(req: ConsolidateRequest): Promise<Consol
   return {
     merges: data.merges
       .filter((m) => ids.has(m.into) && m.into !== 'narrator')
-      .map((m) => ({ into: m.into, from: m.from.filter((id) => ids.has(id) && !main.has(id) && id !== m.into) }))
+      .map((m) => ({
+        into: m.into,
+        from: m.from.filter((id) => ids.has(id) && !main.has(id) && id !== m.into),
+      }))
       .filter((m) => m.from.length > 0),
     updates: data.updates
       .filter((u) => ids.has(u.id) && !main.has(u.id))

@@ -56,4 +56,3 @@ export function toVoiceInfo(v: RawVoice): VoiceInfo {
     useCase: labels.use_case ?? null,
   }
 }
-

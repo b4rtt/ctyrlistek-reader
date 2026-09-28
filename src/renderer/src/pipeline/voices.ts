@@ -53,9 +53,16 @@ export function castVoices(doc: ComicDoc, settings: Settings, elevenVoices: Voic
 }
 
 /** Characters whose automatic casting may change when their gender/age changes. */
-export function recastOne(doc: ComicDoc, id: string, settings: Settings, elevenVoices: VoiceInfo[]): ComicDoc {
+export function recastOne(
+  doc: ComicDoc,
+  id: string,
+  settings: Settings,
+  elevenVoices: VoiceInfo[],
+): ComicDoc {
   const reset = doc.characters.map((c) =>
-    c.id === id && !c.voice.manual ? { ...c, voice: { ...c.voice, elevenVoiceId: null, elevenVoiceName: null } } : c,
+    c.id === id && !c.voice.manual
+      ? { ...c, voice: { ...c.voice, elevenVoiceId: null, elevenVoiceName: null } }
+      : c,
   )
   return castVoices({ ...doc, characters: reset }, settings, elevenVoices)
 }
@@ -85,7 +92,9 @@ export async function synthesizeLine(
     }
     // System voices: the narrator reads the onomatopoeia with gusto.
     const narrator = doc.characters.find((c) => c.id === NARRATOR_ID)
-    return api.voices.synthesize(lineRequest(doc.meta.id, { ...line, kind: 'narration', delivery: 'loud' }, narrator, settings))
+    return api.voices.synthesize(
+      lineRequest(doc.meta.id, { ...line, kind: 'narration', delivery: 'loud' }, narrator, settings),
+    )
   }
   return api.voices.synthesize(lineRequest(doc.meta.id, line, speakerOf(doc, line), settings, context))
 }

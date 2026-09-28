@@ -46,7 +46,10 @@ function star(x, y, s) {
 
 function balloon(cx, cy, rx, ry, tailX, tailY, lines) {
   const text = lines
-    .map((l, i) => `<text x="${cx}" y="${cy - ((lines.length - 1) * 30) / 2 + i * 30 + 10}" text-anchor="middle">${l}</text>`)
+    .map(
+      (l, i) =>
+        `<text x="${cx}" y="${cy - ((lines.length - 1) * 30) / 2 + i * 30 + 10}" text-anchor="middle">${l}</text>`,
+    )
     .join('')
   return `
     <path d="M${cx - rx * 0.2} ${cy + ry * 0.8} L ${tailX} ${tailY} L ${cx + rx * 0.15} ${cy + ry * 0.85} Z" fill="#fff" stroke="#111" stroke-width="4"/>
@@ -73,9 +76,16 @@ const pages = [
    ${panel(60, 860, 540, 834, '#fecaca', `${star(280, 560, 1.5)}${balloon(270, 180, 220, 110, 280, 420, ['NA VÝLET K MĚSÍCI!', 'POLETÍŠ SE MNOU?'])}`)}
    ${panel(640, 860, 540, 834, '#e9d5ff', `${robot(270, 600, 1.5)}${balloon(270, 180, 210, 100, 270, 420, ['JASNĚ!', 'UŽ SE TĚŠÍM!'])}`)}`,
   // Page 2 – wide panel + two panels, sound effect.
-  `${panel(60, 60, 1120, 700, '#dbeafe', `${robot(300, 470, 1.6, 'angry')}${star(820, 460, 1.4)}
+  `${panel(
+    60,
+    60,
+    1120,
+    700,
+    '#dbeafe',
+    `${robot(300, 470, 1.6, 'angry')}${star(820, 460, 1.4)}
       <text x="560" y="220" font-size="96" font-weight="900" fill="#dc2626" stroke="#111" stroke-width="3" text-anchor="middle">BUM!</text>
-      ${balloon(300, 150, 200, 80, 300, 330, ['AU! TO BOLELO!'])}`)}
+      ${balloon(300, 150, 200, 80, 300, 330, ['AU! TO BOLELO!'])}`,
+  )}
    ${panel(60, 800, 540, 894, '#fef9c3', `${star(270, 620, 1.5)}${balloon(270, 200, 230, 120, 280, 480, ['PROMIŇ, ROBÍKU.', 'NEVIDĚLA JSEM', 'TEN KÁMEN.'])}`)}
    ${panel(640, 800, 540, 894, '#dcfce7', `${robot(270, 640, 1.5)}${balloon(270, 200, 220, 110, 270, 470, ['NIC SE NESTALO.', 'LETÍME DÁL!'])}`)}`,
   // Page 3 – three stacked panels.

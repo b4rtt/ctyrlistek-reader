@@ -11,7 +11,8 @@ import { getJob, startImport, subscribeJobs } from '../pipeline/importJob'
 function stageBadge(s: ComicSummary): React.JSX.Element {
   const job = getJob(s.meta.id)
   if (job?.running) return <span className="badge info">Analyzuji…</span>
-  if (s.meta.stage === 'rendering' || s.meta.stage === 'analyzing') return <span className="badge warn">Nedokončeno</span>
+  if (s.meta.stage === 'rendering' || s.meta.stage === 'analyzing')
+    return <span className="badge warn">Nedokončeno</span>
   if (s.needsReview > 0) return <span className="badge warn">Doplnit {s.needsReview}×</span>
   if (s.pagesFailed > 0) return <span className="badge danger">{s.pagesFailed} str. s chybou</span>
   if (s.lineCount > 0 && s.voicedLines >= s.lineCount) return <span className="badge ok">Připraveno</span>
@@ -41,7 +42,9 @@ function ComicCard({ s, onChanged }: { s: ComicSummary; onChanged: () => void })
     }
   }
 
-  const progress = job ? (job.state.analyzed + job.state.failed) / Math.max(1, job.state.total) : s.pagesDone / Math.max(1, s.meta.pageCount)
+  const progress = job
+    ? (job.state.analyzed + job.state.failed) / Math.max(1, job.state.total)
+    : s.pagesDone / Math.max(1, s.meta.pageCount)
 
   return (
     <div className="comic-card">
@@ -75,10 +78,17 @@ function ComicCard({ s, onChanged }: { s: ComicSummary; onChanged: () => void })
             </button>
           ) : (
             <>
-              <button className="btn small primary grow" onClick={() => go({ name: 'player', id: s.meta.id })}>
+              <button
+                className="btn small primary grow"
+                onClick={() => go({ name: 'player', id: s.meta.id })}
+              >
                 <Icon name="play" size={14} /> Přehrát
               </button>
-              <button className="btn small" onClick={() => go({ name: 'review', id: s.meta.id })} title="Postavy, hlasy a texty">
+              <button
+                className="btn small"
+                onClick={() => go({ name: 'review', id: s.meta.id })}
+                title="Postavy, hlasy a texty"
+              >
                 <Icon name="edit" size={16} />
               </button>
             </>
@@ -148,7 +158,10 @@ export function Library(): React.JSX.Element {
     }
   }
 
-  const missingKeys = settings && !settings.mockAi && (!settings.openaiKey || (settings.voiceMode === 'elevenlabs' && !settings.elevenKey))
+  const missingKeys =
+    settings &&
+    !settings.mockAi &&
+    (!settings.openaiKey || (settings.voiceMode === 'elevenlabs' && !settings.elevenKey))
 
   return (
     <>
@@ -198,7 +211,9 @@ export function Library(): React.JSX.Element {
               role="button"
               tabIndex={0}
             >
-              <div className="icon-bubble">{busy ? <span className="spinner" /> : <Icon name="upload" size={30} />}</div>
+              <div className="icon-bubble">
+                {busy ? <span className="spinner" /> : <Icon name="upload" size={30} />}
+              </div>
               <h2>Nahrát komiks v PDF</h2>
               <div className="muted">Přetáhněte sem soubor, nebo klikněte a vyberte ho.</div>
               <input
@@ -218,7 +233,10 @@ export function Library(): React.JSX.Element {
               <ol>
                 <li>
                   <b>1</b>
-                  <span>AI projde každou stránku: najde okénka, přečte bubliny a pozná, kdo mluví a jak (vesele, naštvaně, šeptem…).</span>
+                  <span>
+                    AI projde každou stránku: najde okénka, přečte bubliny a pozná, kdo mluví a jak (vesele,
+                    naštvaně, šeptem…).
+                  </span>
                 </li>
                 <li>
                   <b>2</b>

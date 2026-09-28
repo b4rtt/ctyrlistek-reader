@@ -52,12 +52,18 @@ export function registerIpc(): void {
   handle('library:load', (id: string) => library.loadComic(id))
   handle('library:save', (doc: ComicDoc) => library.saveComic(doc))
   handle('library:remove', (id: string) => library.removeComic(id))
-  handle('library:writePage', (id: string, index: number, jpeg: Uint8Array) => library.writePage(id, index, jpeg))
+  handle('library:writePage', (id: string, index: number, jpeg: Uint8Array) =>
+    library.writePage(id, index, jpeg),
+  )
   handle('library:readSource', (id: string) => library.readSource(id))
   handle('library:reveal', (id: string | null) => library.revealComic(id))
 
-  handle('ai:analyzePage', (req: AnalyzePageRequest) => (isMockAi() ? analyzePageMock(req) : analyzePageOpenAI(req)))
-  handle('ai:consolidate', (req: ConsolidateRequest) => (isMockAi() ? consolidateMock(req) : consolidateOpenAI(req)))
+  handle('ai:analyzePage', (req: AnalyzePageRequest) =>
+    isMockAi() ? analyzePageMock(req) : analyzePageOpenAI(req),
+  )
+  handle('ai:consolidate', (req: ConsolidateRequest) =>
+    isMockAi() ? consolidateMock(req) : consolidateOpenAI(req),
+  )
 
   handle('voices:listEleven', (force?: boolean) => listVoices(force))
   handle('voices:listSystem', () => listSystemVoices())

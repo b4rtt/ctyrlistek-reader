@@ -38,7 +38,16 @@ export function panel(img: Raster, x: number, y: number, w: number, h: number): 
   strokeRect(img, x, y, w, h, [0, 0, 0], 3)
 }
 
-export function ellipse(img: Raster, cx: number, cy: number, rx: number, ry: number, fill: RGB, stroke: RGB, t = 2): void {
+export function ellipse(
+  img: Raster,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  fill: RGB,
+  stroke: RGB,
+  t = 2,
+): void {
   for (let y = Math.floor(cy - ry - t); y <= cy + ry + t; y++)
     for (let x = Math.floor(cx - rx - t); x <= cx + rx + t; x++) {
       const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2

@@ -31,7 +31,8 @@ export async function listSystemVoices(): Promise<SystemVoiceInfo[]> {
     if (m) voices.push({ name: m[1].trim(), lang: m[2] })
   }
   const rank = (v: SystemVoiceInfo): number =>
-    (v.lang === 'cs_CZ' ? 0 : v.lang === 'sk_SK' ? 10 : 20) - (/premium/i.test(v.name) ? 2 : /enhanced/i.test(v.name) ? 1 : 0)
+    (v.lang === 'cs_CZ' ? 0 : v.lang === 'sk_SK' ? 10 : 20) -
+    (/premium/i.test(v.name) ? 2 : /enhanced/i.test(v.name) ? 1 : 0)
   voicesCache = voices.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
   return voicesCache
 }
@@ -54,11 +55,28 @@ export async function synthesizeSystem(p: SystemSynthParams): Promise<{ wav: Buf
   const factor = semitonesToFactor(semis)
   // Resampling changes speed by `factor`; compensate when synthesising.
   const wpm = Math.round(Math.min(450, Math.max(90, (BASE_WPM * p.rate * p.prosody.rate) / factor)))
-  const tmp = join(tmpdir(), `ctyrlistek-say-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`)
+  const tmp = join(
+    tmpdir(),
+    `ctyrlistek-say-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`,
+  )
   try {
-    await run('say', ['-v', p.voice, '-r', String(wpm), '--file-format=WAVE', '--data-format=LEI16@22050', '-o', tmp, p.text], {
-      timeout: 60_000,
-    })
+    await run(
+      'say',
+      [
+        '-v',
+        p.voice,
+        '-r',
+        String(wpm),
+        '--file-format=WAVE',
+        '--data-format=LEI16@22050',
+        '-o',
+        tmp,
+        p.text,
+      ],
+      {
+        timeout: 60_000,
+      },
+    )
     const pcm = decodeWav(await fs.readFile(tmp))
     let samples = trimSilence(pcm.samples, pcm.sampleRate)
     samples = pitchShift(samples, factor)

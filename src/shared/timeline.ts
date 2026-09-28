@@ -34,7 +34,13 @@ export function buildTimeline(doc: ComicDoc): Beat[] {
         return
       }
       panel.lines.forEach((_, li) => {
-        beats.push({ page: page.index, panel: pi, line: li, pageStart: pi === 0 && li === 0, panelStart: li === 0 })
+        beats.push({
+          page: page.index,
+          panel: pi,
+          line: li,
+          pageStart: pi === 0 && li === 0,
+          panelStart: li === 0,
+        })
       })
     })
   }
@@ -67,7 +73,9 @@ export function allLines(doc: ComicDoc): { page: number; panel: number; index: n
   const out: { page: number; panel: number; index: number; line: Line }[] = []
   for (const page of doc.pages) {
     if (!isPlayablePage(page)) continue
-    page.panels.forEach((panel, pi) => panel.lines.forEach((line, index) => out.push({ page: page.index, panel: pi, index, line })))
+    page.panels.forEach((panel, pi) =>
+      panel.lines.forEach((line, index) => out.push({ page: page.index, panel: pi, index, line })),
+    )
   }
   return out
 }

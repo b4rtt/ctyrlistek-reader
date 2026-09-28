@@ -14,8 +14,14 @@ import { PREVIEW_HOST } from './tts/audio'
 
 export function registerSchemesAsPrivileged(): void {
   protocol.registerSchemesAsPrivileged([
-    { scheme: 'comic', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
-    { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+    {
+      scheme: 'comic',
+      privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true },
+    },
+    {
+      scheme: 'app',
+      privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true },
+    },
   ])
 }
 
@@ -38,7 +44,8 @@ export function registerProtocols(rendererDir: string): void {
     try {
       const url = new URL(request.url)
       const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '')
-      const file = url.hostname === PREVIEW_HOST ? join(previewDir(), basename(rel)) : comicAsset(url.hostname, rel)
+      const file =
+        url.hostname === PREVIEW_HOST ? join(previewDir(), basename(rel)) : comicAsset(url.hostname, rel)
       const res = await net.fetch(pathToFileURL(file).toString(), { headers: request.headers })
       if (!res.ok) return notFound()
       // Page images and audio are content-addressed or immutable once written.

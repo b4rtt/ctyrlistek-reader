@@ -12,14 +12,24 @@ describe('word timings', () => {
     const chars = [...input]
     const starts = chars.map((_, i) => i * 0.1)
     const ends = chars.map((_, i) => i * 0.1 + 0.1)
-    const words = wordsFromAlignment(text, 10, { characters: chars, character_start_times_seconds: starts, character_end_times_seconds: ends }, 3)
+    const words = wordsFromAlignment(
+      text,
+      10,
+      { characters: chars, character_start_times_seconds: starts, character_end_times_seconds: ends },
+      3,
+    )
     expect(words).toHaveLength(2)
     expect(words[0].t0).toBeCloseTo(1.0)
     expect(words[1].t0).toBeCloseTo(1.5)
   })
 
   it('falls back to proportional timing on mismatch', () => {
-    const words = wordsFromAlignment('Ahoj světe', 0, { characters: ['x'], character_start_times_seconds: [0], character_end_times_seconds: [1] }, 2)
+    const words = wordsFromAlignment(
+      'Ahoj světe',
+      0,
+      { characters: ['x'], character_start_times_seconds: [0], character_end_times_seconds: [1] },
+      2,
+    )
     expect(words).toHaveLength(2)
     expect(words[1].t0).toBeGreaterThan(words[0].t0)
     expect(words[1].t1).toBeLessThanOrEqual(2)

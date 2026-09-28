@@ -160,7 +160,12 @@ export class ImportJob {
         }
       }
       this.doc.pages = pages
-      this.doc.meta = { ...this.doc.meta, pageCount: pdf.numPages, cover: pages[0]?.image ?? null, stage: 'analyzing' }
+      this.doc.meta = {
+        ...this.doc.meta,
+        pageCount: pdf.numPages,
+        cover: pages[0]?.image ?? null,
+        stage: 'analyzing',
+      }
       await this.save()
     } finally {
       void close()
@@ -221,12 +226,17 @@ export class ImportJob {
         inputTokens: this.state.usage.inputTokens + result.usage.inputTokens,
         outputTokens: this.state.usage.outputTokens + result.usage.outputTokens,
       }
-      this.doc.meta = { ...this.doc.meta, analysis: { ...this.doc.meta.analysis, model: result.model, ...usage } }
+      this.doc.meta = {
+        ...this.doc.meta,
+        analysis: { ...this.doc.meta.analysis, model: result.model, ...usage },
+      }
       this.set({ analyzed: this.state.analyzed + 1, usage })
     } catch (err) {
       const code = errorCode(err)
       const message = errorMessage(err)
-      this.doc.pages = this.doc.pages.map((p) => (p.index === index ? { ...p, status: 'error', error: message } : p))
+      this.doc.pages = this.doc.pages.map((p) =>
+        p.index === index ? { ...p, status: 'error', error: message } : p,
+      )
       this.set({ failed: this.state.failed + 1, error: code && FATAL.has(code) ? message : this.state.error })
     } finally {
       bitmap?.close()
@@ -248,7 +258,8 @@ export class ImportJob {
     try {
       const bitmaps = new Map<number, ImageBitmap>()
       const bitmapFor = async (page: number): Promise<ImageBitmap> => {
-        if (!bitmaps.has(page)) bitmaps.set(page, await loadPageBitmap(this.doc.meta.id, this.doc.pages[page].image))
+        if (!bitmaps.has(page))
+          bitmaps.set(page, await loadPageBitmap(this.doc.meta.id, this.doc.pages[page].image))
         return bitmaps.get(page)!
       }
       const characters: ConsolidateCharacter[] = []

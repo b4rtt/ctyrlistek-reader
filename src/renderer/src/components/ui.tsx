@@ -23,7 +23,12 @@ export function Modal({
   }, [onClose])
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" style={width ? { width: `min(${width}px, 100%)` } : undefined}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        style={width ? { width: `min(${width}px, 100%)` } : undefined}
+      >
         <header>
           <h2>{title}</h2>
           <button className="btn ghost icon" onClick={onClose} aria-label="Zavřít">
@@ -74,7 +79,13 @@ export const useToast = (): ((text: string, kind?: ToastKind) => void) => useCon
 
 // --------------------------------------------------------------- progress --
 
-export function Progress({ value, indeterminate }: { value: number; indeterminate?: boolean }): React.JSX.Element {
+export function Progress({
+  value,
+  indeterminate,
+}: {
+  value: number
+  indeterminate?: boolean
+}): React.JSX.Element {
   return (
     <div className={`progress ${indeterminate ? 'indeterminate' : ''}`}>
       <i style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%` }} />

@@ -22,7 +22,8 @@ export class ElevenError extends Error {
 
 function apiKey(): string {
   const key = getSecret('elevenlabs')
-  if (!key) throw new Error(`${ERROR_CODES.NO_ELEVEN_KEY}: Chybí ElevenLabs API klíč – doplňte ho v Nastavení.`)
+  if (!key)
+    throw new Error(`${ERROR_CODES.NO_ELEVEN_KEY}: Chybí ElevenLabs API klíč – doplňte ho v Nastavení.`)
   return key
 }
 
@@ -32,9 +33,18 @@ function friendlyError(status: number, detail: string): ElevenError {
   if (status === 401 || status === 403) {
     if (/quota|credits|character/i.test(detail))
       return new ElevenError(`${ERROR_CODES.QUOTA}: Na ElevenLabs účtu došly znaky/kredity.`, status, detail)
-    return new ElevenError(`${ERROR_CODES.AUTH}: ElevenLabs odmítl API klíč. Zkontrolujte ho v Nastavení.`, status, detail)
+    return new ElevenError(
+      `${ERROR_CODES.AUTH}: ElevenLabs odmítl API klíč. Zkontrolujte ho v Nastavení.`,
+      status,
+      detail,
+    )
   }
-  if (status === 429) return new ElevenError(`${ERROR_CODES.RATE_LIMIT}: ElevenLabs je přetížený, zkouším znovu…`, status, detail)
+  if (status === 429)
+    return new ElevenError(
+      `${ERROR_CODES.RATE_LIMIT}: ElevenLabs je přetížený, zkouším znovu…`,
+      status,
+      detail,
+    )
   return new ElevenError(`ElevenLabs chyba ${status}: ${detail.slice(0, 300)}`, status, detail)
 }
 
@@ -45,7 +55,11 @@ async function request(path: string, init: RequestInit = {}, attempts = 5): Prom
     try {
       const res = await fetch(`${API}${path}`, {
         ...init,
-        headers: { 'xi-api-key': apiKey(), ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
+        headers: {
+          'xi-api-key': apiKey(),
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+          ...init.headers,
+        },
         signal: AbortSignal.timeout(120_000),
       })
       if (res.ok) return res
@@ -61,7 +75,9 @@ async function request(path: string, init: RequestInit = {}, attempts = 5): Prom
     } catch (err) {
       if (err instanceof ElevenError) throw err
       if (err instanceof Error && err.message.startsWith(ERROR_CODES.NO_ELEVEN_KEY)) throw err
-      lastErr = new Error(`${ERROR_CODES.NETWORK}: Nepodařilo se spojit s ElevenLabs (${(err as Error).message}).`)
+      lastErr = new Error(
+        `${ERROR_CODES.NETWORK}: Nepodařilo se spojit s ElevenLabs (${(err as Error).message}).`,
+      )
       await sleep(800 * 2 ** i)
     }
   }
@@ -80,7 +96,11 @@ export async function listVoices(force = false): Promise<VoiceInfo[]> {
     const qs = new URLSearchParams({ page_size: '100', include_total_count: 'false' })
     if (token) qs.set('next_page_token', token)
     const res = await request(`/v2/voices?${qs}`)
-    const body = (await res.json()) as { voices: RawVoice[]; has_more: boolean; next_page_token: string | null }
+    const body = (await res.json()) as {
+      voices: RawVoice[]
+      has_more: boolean
+      next_page_token: string | null
+    }
     voices.push(...body.voices.map(toVoiceInfo))
     if (!body.has_more || !body.next_page_token) break
     token = body.next_page_token
@@ -101,14 +121,19 @@ export async function quota(): Promise<ElevenQuota> {
     used: s.character_count,
     limit: s.character_limit,
     tier: s.tier,
-    resetsAt: s.next_character_count_reset_unix ? new Date(s.next_character_count_reset_unix * 1000).toISOString() : null,
+    resetsAt: s.next_character_count_reset_unix
+      ? new Date(s.next_character_count_reset_unix * 1000).toISOString()
+      : null,
   }
 }
 
 export async function testEleven(): Promise<TestResult> {
   try {
     const q = await quota()
-    return { ok: true, message: `Klíč funguje (tarif ${q.tier}, využito ${q.used.toLocaleString('cs')} z ${q.limit.toLocaleString('cs')} znaků).` }
+    return {
+      ok: true,
+      message: `Klíč funguje (tarif ${q.tier}, využito ${q.used.toLocaleString('cs')} z ${q.limit.toLocaleString('cs')} znaků).`,
+    }
   } catch (err) {
     // Keys restricted to TTS may not read the subscription – try the voice list.
     try {
@@ -138,6 +163,8 @@ export interface TtsResult {
 }
 
 const OUTPUT_FORMAT = 'mp3_44100_128'
+/** Models for which the timestamps endpoint turned out to be unavailable. */
+const noTimestamps = new Set<string>()
 
 export async function synthesize(p: TtsParams): Promise<TtsResult> {
   const body: Record<string, unknown> = {
@@ -151,7 +178,15 @@ export async function synthesize(p: TtsParams): Promise<TtsResult> {
   if (p.nextText) body.next_text = p.nextText
 
   const path = `/v1/text-to-speech/${encodeURIComponent(p.voiceId)}`
+  const plain = async (b: Record<string, unknown>): Promise<TtsResult> => {
+    const res = await request(`${path}?output_format=${OUTPUT_FORMAT}`, {
+      method: 'POST',
+      body: JSON.stringify(b),
+    })
+    return { audio: Buffer.from(await res.arrayBuffer()), alignment: null }
+  }
   const run = async (b: Record<string, unknown>): Promise<TtsResult> => {
+    if (noTimestamps.has(p.modelId)) return plain(b)
     try {
       const res = await request(`${path}/with-timestamps?output_format=${OUTPUT_FORMAT}`, {
         method: 'POST',
@@ -160,10 +195,12 @@ export async function synthesize(p: TtsParams): Promise<TtsResult> {
       const json = (await res.json()) as { audio_base64: string; alignment: CharAlignment | null }
       return { audio: Buffer.from(json.audio_base64, 'base64'), alignment: json.alignment ?? null }
     } catch (err) {
-      // Some models do not support timestamps – fall back to plain audio.
-      if (err instanceof ElevenError && (err.status === 400 || err.status === 422) && /timestamp|alignment/i.test(err.detail)) {
-        const res = await request(`${path}?output_format=${OUTPUT_FORMAT}`, { method: 'POST', body: JSON.stringify(b) })
-        return { audio: Buffer.from(await res.arrayBuffer()), alignment: null }
+      // Timestamps may not be available for every model – use plain audio
+      // (word highlighting then falls back to estimated timings).
+      if (err instanceof ElevenError && [400, 404, 422].includes(err.status)) {
+        const result = await plain(b)
+        noTimestamps.add(p.modelId)
+        return result
       }
       throw err
     }
@@ -173,7 +210,11 @@ export async function synthesize(p: TtsParams): Promise<TtsResult> {
     return await run(body)
   } catch (err) {
     // Unsupported optional parameters → retry with a minimal body.
-    if (err instanceof ElevenError && (err.status === 400 || err.status === 422) && /language|previous_text|next_text/i.test(err.detail)) {
+    if (
+      err instanceof ElevenError &&
+      (err.status === 400 || err.status === 422) &&
+      /language|previous_text|next_text/i.test(err.detail)
+    ) {
       const { language_code: _l, previous_text: _p, next_text: _n, ...minimal } = body
       return run(minimal)
     }

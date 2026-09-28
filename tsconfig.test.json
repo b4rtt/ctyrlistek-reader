@@ -17,5 +17,13 @@
       "@renderer/*": ["src/renderer/src/*"]
     }
   },
-  "include": ["test/**/*", "src/shared/**/*", "src/main/ai/convert.ts", "src/main/ai/prompts.ts", "src/main/tts/voiceInfo.ts", "src/main/tts/wav.ts", "src/renderer/src/cv/**/*"]
+  "include": [
+    "test/**/*",
+    "src/shared/**/*",
+    "src/main/ai/convert.ts",
+    "src/main/ai/prompts.ts",
+    "src/main/tts/voiceInfo.ts",
+    "src/main/tts/wav.ts",
+    "src/renderer/src/cv/**/*"
+  ]
 }

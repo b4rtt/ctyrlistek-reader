@@ -20,7 +20,13 @@ writeFileSync(join(dataDir, 'settings.json'), JSON.stringify({ voiceMode: 'syste
 const errors = []
 const app = await electron.launch({
   args: [root],
-  env: { ...process.env, CTYRLISTEK_DATA_DIR: dataDir, CTYRLISTEK_MOCK_AI: '1', OPENAI_API_KEY: '', ELEVENLABS_API_KEY: '' },
+  env: {
+    ...process.env,
+    CTYRLISTEK_DATA_DIR: dataDir,
+    CTYRLISTEK_MOCK_AI: '1',
+    OPENAI_API_KEY: '',
+    ELEVENLABS_API_KEY: '',
+  },
 })
 const step = async (name, fn) => {
   const t0 = Date.now()
@@ -41,14 +47,22 @@ try {
 
   await step('import + mock analysis', async () => {
     await win.setInputFiles('input[type=file]', join(root, 'test/fixtures/sample-comic.pdf'))
-    await win.getByText('AI čte stránky').or(win.getByText('Načítám stránky')).first().waitFor({ timeout: 20000 })
+    await win
+      .getByText('AI čte stránky')
+      .or(win.getByText('Načítám stránky'))
+      .first()
+      .waitFor({ timeout: 20000 })
     await win.waitForTimeout(700)
     await win.screenshot({ path: join(shots, '2-processing.png') })
     await win.getByText('Postavy a hlasy').waitFor({ timeout: 60000 })
   })
 
   await step('review screen', async () => {
-    await win.getByText('Rozzlobený soused').or(win.locator('input[value="Rozzlobený soused"]')).first().waitFor({ timeout: 10000 })
+    await win
+      .getByText('Rozzlobený soused')
+      .or(win.locator('input[value="Rozzlobený soused"]'))
+      .first()
+      .waitFor({ timeout: 10000 })
     await win.waitForTimeout(500)
     await win.screenshot({ path: join(shots, '3-review.png') })
     // Resolve the uncertain character: set gender.

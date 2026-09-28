@@ -5,12 +5,19 @@ import { assetUrl } from '../api'
 
 type Drawable = CanvasImageSource & { width: number; height: number }
 
-export async function encodeJpeg(canvas: HTMLCanvasElement | OffscreenCanvas, quality = 0.9): Promise<Uint8Array> {
+export async function encodeJpeg(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+  quality = 0.9,
+): Promise<Uint8Array> {
   const blob =
     canvas instanceof OffscreenCanvas
       ? await canvas.convertToBlob({ type: 'image/jpeg', quality })
       : await new Promise<Blob>((resolve, reject) =>
-          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Nepodařilo se uložit obrázek'))), 'image/jpeg', quality),
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error('Nepodařilo se uložit obrázek'))),
+            'image/jpeg',
+            quality,
+          ),
         )
   return new Uint8Array(await blob.arrayBuffer())
 }
@@ -25,7 +32,12 @@ export async function loadPageBitmap(comicId: string, rel: string): Promise<Imag
  * Size that fits the OpenAI "high" detail budget (≤ `maxPatches` patches of
  * 32×32 px) so the service does not rescale – coordinates then map 1:1.
  */
-export function fitPatches(w: number, h: number, maxPatches = 2400, patch = 32): { width: number; height: number } {
+export function fitPatches(
+  w: number,
+  h: number,
+  maxPatches = 2400,
+  patch = 32,
+): { width: number; height: number } {
   let scale = Math.min(1, 2048 / Math.max(w, h))
   const patches = (s: number): number => Math.ceil((w * s) / patch) * Math.ceil((h * s) / patch)
   while (patches(scale) > maxPatches) scale *= 0.97
@@ -46,7 +58,10 @@ export async function aiImage(src: Drawable): Promise<EncodedImage> {
 }
 
 /** Page with candidate panels outlined and labelled P1, P2, … */
-export async function overlayImage(src: Drawable, candidates: { label: string; rect: Rect }[]): Promise<EncodedImage> {
+export async function overlayImage(
+  src: Drawable,
+  candidates: { label: string; rect: Rect }[],
+): Promise<EncodedImage> {
   const scale = Math.min(1, 900 / Math.max(src.width, src.height))
   const width = Math.round(src.width * scale)
   const height = Math.round(src.height * scale)

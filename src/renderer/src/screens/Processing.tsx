@@ -64,11 +64,16 @@ export function Processing({ id }: { id: string }): React.JSX.Element {
   const phaseIndex = PHASES.findIndex((p) => p.key === state?.phase)
   const total = state?.total ?? 0
   const progress =
-    state?.phase === 'rendering' ? state.rendered / Math.max(1, total) : ((state?.analyzed ?? 0) + (state?.failed ?? 0)) / Math.max(1, total)
+    state?.phase === 'rendering'
+      ? state.rendered / Math.max(1, total)
+      : ((state?.analyzed ?? 0) + (state?.failed ?? 0)) / Math.max(1, total)
   const pages = doc?.pages ?? []
   const settings = useSettings()
   const price = OPENAI_MODELS.find((m) => m.id === settings?.openaiModel)?.price
-  const costUsd = state && price ? (state.usage.inputTokens * price[0] + state.usage.outputTokens * price[1]) / 1_000_000 : 0
+  const costUsd =
+    state && price
+      ? (state.usage.inputTokens * price[0] + state.usage.outputTokens * price[1]) / 1_000_000
+      : 0
 
   return (
     <>
@@ -84,7 +89,11 @@ export function Processing({ id }: { id: string }): React.JSX.Element {
           <div className="steps">
             {PHASES.map((p, i) => (
               <div key={p.key} className={`step ${i === phaseIndex ? 'on' : i < phaseIndex ? 'done' : ''}`}>
-                {i < phaseIndex || state?.phase === 'done' ? <Icon name="check" size={16} /> : i === phaseIndex ? <span className="spinner" /> : null}
+                {i < phaseIndex || state?.phase === 'done' ? (
+                  <Icon name="check" size={16} />
+                ) : i === phaseIndex ? (
+                  <span className="spinner" />
+                ) : null}
                 {p.label}
               </div>
             ))}
@@ -129,14 +138,18 @@ export function Processing({ id }: { id: string }): React.JSX.Element {
                 </button>
               )}
               {state && state.failed > 0 && state.phase !== 'analyzing' && (
-                <span className="small muted">{state.failed} stran se nepodařilo přečíst – můžete je zkusit znovu později v editoru.</span>
+                <span className="small muted">
+                  {state.failed} stran se nepodařilo přečíst – můžete je zkusit znovu později v editoru.
+                </span>
               )}
               <div className="grow" />
-              {state && ['error', 'cancelled', 'done'].includes(state.phase) && pages.some((p) => p.status === 'done') && (
-                <button className="btn" onClick={() => go({ name: 'review', id })}>
-                  Pokračovat na kontrolu postav
-                </button>
-              )}
+              {state &&
+                ['error', 'cancelled', 'done'].includes(state.phase) &&
+                pages.some((p) => p.status === 'done') && (
+                  <button className="btn" onClick={() => go({ name: 'review', id })}>
+                    Pokračovat na kontrolu postav
+                  </button>
+                )}
             </div>
           </div>
 

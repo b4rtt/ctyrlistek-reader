@@ -51,7 +51,9 @@ describe('assignElevenVoices', () => {
 
   it('respects manual choices', () => {
     const roster = initialRoster().map((c) =>
-      c.id === 'bobik' ? { ...c, voice: { ...c.voice, elevenVoiceId: 'm-calm', elevenVoiceName: 'm-calm', manual: true } } : c,
+      c.id === 'bobik'
+        ? { ...c, voice: { ...c.voice, elevenVoiceId: 'm-calm', elevenVoiceName: 'm-calm', manual: true } }
+        : c,
     )
     const next = assignElevenVoices(roster, voices)
     expect(next.find((c) => c.id === 'bobik')!.voice.elevenVoiceId).toBe('m-calm')
@@ -65,6 +67,8 @@ describe('assignSystemVoices', () => {
     const pitches = cast.map((c) => c.voice.pitch)
     expect(new Set(pitches).size).toBe(pitches.length)
     expect(cast.every((c) => c.voice.systemVoice === 'Zuzana')).toBe(true)
-    expect(cast.find((c) => c.id === 'bobik')!.voice.pitch).toBeLessThan(cast.find((c) => c.id === 'fifinka')!.voice.pitch)
+    expect(cast.find((c) => c.id === 'bobik')!.voice.pitch).toBeLessThan(
+      cast.find((c) => c.id === 'fifinka')!.voice.pitch,
+    )
   })
 })

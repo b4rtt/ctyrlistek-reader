@@ -1,7 +1,16 @@
 /** Conversion of the raw (schema-shaped) AI answer into app types. Pure – unit tested. */
 import type { AiCharacter, AiLine, AiPanel, AnalyzePageResult } from '@shared/api'
 import { boxToRect } from '@shared/geometry'
-import type { AgeGroup, Confidence, Delivery, Emotion, Gender, Intensity, LineKind, PageKind } from '@shared/types'
+import type {
+  AgeGroup,
+  Confidence,
+  Delivery,
+  Emotion,
+  Gender,
+  Intensity,
+  LineKind,
+  PageKind,
+} from '@shared/types'
 
 type Box = { x0: number; y0: number; x1: number; y1: number }
 
@@ -37,7 +46,11 @@ export interface RawPage {
   notes: string
 }
 
-export function convertPage(raw: RawPage, width: number, height: number): Omit<AnalyzePageResult, 'usage' | 'model'> {
+export function convertPage(
+  raw: RawPage,
+  width: number,
+  height: number,
+): Omit<AnalyzePageResult, 'usage' | 'model'> {
   const panels: AiPanel[] = []
   for (const p of raw.panels) {
     const rect = boxToRect(p.box, width, height)
@@ -71,4 +84,3 @@ export function convertPage(raw: RawPage, width: number, height: number): Omit<A
   }))
   return { pageKind: raw.page_kind, panels, characters, notes: raw.notes }
 }
-

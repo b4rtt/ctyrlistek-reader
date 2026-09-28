@@ -51,7 +51,12 @@ interface StoredMeta {
   words: AudioRef['words']
 }
 
-async function cached(dir: string, key: string, ext: string, provider: AudioRef['provider']): Promise<AudioRef | null> {
+async function cached(
+  dir: string,
+  key: string,
+  ext: string,
+  provider: AudioRef['provider'],
+): Promise<AudioRef | null> {
   const meta = join(dir, `${key}.json`)
   const file = join(dir, `${key}.${ext}`)
   if (!existsSync(meta) || !existsSync(file)) return null
@@ -63,7 +68,14 @@ async function cached(dir: string, key: string, ext: string, provider: AudioRef[
   }
 }
 
-async function store(dir: string, key: string, ext: string, data: Buffer, meta: StoredMeta, provider: AudioRef['provider']): Promise<AudioRef> {
+async function store(
+  dir: string,
+  key: string,
+  ext: string,
+  data: Buffer,
+  meta: StoredMeta,
+  provider: AudioRef['provider'],
+): Promise<AudioRef> {
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(join(dir, `${key}.${ext}`), data)
   await fs.writeFile(join(dir, `${key}.json`), JSON.stringify(meta))
@@ -92,14 +104,29 @@ export async function synthesizeLine(req: SynthesizeRequest): Promise<AudioRef |
     if (!systemTtsSupported()) return null // renderer falls back to Web Speech
     const voice = req.voice.systemVoice || settings.systemVoice
     const prosody = systemProsody(perf)
-    const key = hash({ v: PIPELINE_VERSION, e: 'system', text, voice, pitch: req.voice.pitch, rate: req.voice.rate, prosody })
+    const key = hash({
+      v: PIPELINE_VERSION,
+      e: 'system',
+      text,
+      voice,
+      pitch: req.voice.pitch,
+      rate: req.voice.rate,
+      prosody,
+    })
     return dedupe(key, async () => {
       const hit = await cached(dir, key, 'wav', 'system')
       if (hit) return hit
       const { wav, durationMs } = await systemGate.run(() =>
         synthesizeSystem({ text, voice, pitch: req.voice.pitch, rate: req.voice.rate, prosody }),
       )
-      return store(dir, key, 'wav', wav, { durationMs, words: proportionalWords(text, durationMs / 1000) }, 'system')
+      return store(
+        dir,
+        key,
+        'wav',
+        wav,
+        { durationMs, words: proportionalWords(text, durationMs / 1000) },
+        'system',
+      )
     })
   }
 
@@ -112,13 +139,31 @@ export async function synthesizeLine(req: SynthesizeRequest): Promise<AudioRef |
   // Context helps v2 intonation; v3 is driven by tags instead.
   const previousText = isV3(model) ? undefined : req.previousText
   const nextText = isV3(model) ? undefined : req.nextText
-  const key = hash({ v: PIPELINE_VERSION, e: 'eleven', input, voiceId, model, voiceSettings, languageCode, previousText, nextText })
+  const key = hash({
+    v: PIPELINE_VERSION,
+    e: 'eleven',
+    input,
+    voiceId,
+    model,
+    voiceSettings,
+    languageCode,
+    previousText,
+    nextText,
+  })
 
   return dedupe(key, async () => {
     const hit = await cached(dir, key, 'mp3', 'elevenlabs')
     if (hit) return hit
     const res = await elevenGate.run(() =>
-      synthesize({ voiceId, text: input, modelId: model, voiceSettings: { ...voiceSettings }, languageCode, previousText, nextText }),
+      synthesize({
+        voiceId,
+        text: input,
+        modelId: model,
+        voiceSettings: { ...voiceSettings },
+        languageCode,
+        previousText,
+        nextText,
+      }),
     )
     const durationMs = mp3DurationMs(res.audio.length)
     const words = wordsFromAlignment(text, offset, res.alignment, durationMs / 1000)
@@ -136,6 +181,13 @@ export async function generateSfx(req: SfxRequest): Promise<AudioRef> {
     const hit = await cached(dir, key, 'mp3', 'elevenlabs')
     if (hit) return hit
     const audio = await elevenGate.run(() => soundEffect(prompt, duration))
-    return store(dir, key, 'mp3', audio, { durationMs: mp3DurationMs(audio.length), words: null }, 'elevenlabs')
+    return store(
+      dir,
+      key,
+      'mp3',
+      audio,
+      { durationMs: mp3DurationMs(audio.length), words: null },
+      'elevenlabs',
+    )
   })
 }

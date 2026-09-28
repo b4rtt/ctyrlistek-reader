@@ -228,7 +228,10 @@ export class PlayerController {
       }
       if (cameraMoves.panelMove) {
         const panel = beatPanel(this.doc, b)
-        if (panel) this.set({ camera: { page: b.page, rect: panel.rect, duration: cameraMoves.panelMove, spotlight: true } })
+        if (panel)
+          this.set({
+            camera: { page: b.page, rect: panel.rect, duration: cameraMoves.panelMove, spotlight: true },
+          })
         if (!(await this.wait(cameraMoves.panelMove * 0.85, gen))) return
       }
 
@@ -274,7 +277,9 @@ export class PlayerController {
         pageIntro = true
         panelMove = 1100
       } else if (jump || newPage) {
-        this.set({ camera: { page: b.page, rect: panel.rect, duration: jump && !newPage ? 700 : 0, spotlight: true } })
+        this.set({
+          camera: { page: b.page, rect: panel.rect, duration: jump && !newPage ? 700 : 0, spotlight: true },
+        })
       } else if (b.panelStart) {
         panelMove = easeDuration(prev.rect, panel.rect)
       }

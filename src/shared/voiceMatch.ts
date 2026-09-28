@@ -51,7 +51,8 @@ function scoreVoice(voice: VoiceInfo, ch: Character, timesUsed: number): number 
   }
 
   if (ch.age === 'child') {
-    if (voice.traits.some((t) => ['young', 'child', 'kid', 'childish', 'cartoon', 'animated'].includes(t))) score += 6
+    if (voice.traits.some((t) => ['young', 'child', 'kid', 'childish', 'cartoon', 'animated'].includes(t)))
+      score += 6
     if (voice.age === 'elderly') score -= 8
   } else if (ch.age === 'elderly') {
     if (voice.age === 'elderly') score += 6

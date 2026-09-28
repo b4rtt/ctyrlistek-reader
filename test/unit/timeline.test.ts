@@ -7,7 +7,18 @@ const R = { x: 0, y: 0, w: 0.5, h: 0.5 }
 
 function doc() {
   const d = makeDoc(3)
-  applyPageResult(d, 0, result([{ label: null, rect: R, lines: [aiLine('bobik', 'A'), aiLine('pinda', 'B')] }, { label: null, rect: R, lines: [] }], []), { candidates: [] })
+  applyPageResult(
+    d,
+    0,
+    result(
+      [
+        { label: null, rect: R, lines: [aiLine('bobik', 'A'), aiLine('pinda', 'B')] },
+        { label: null, rect: R, lines: [] },
+      ],
+      [],
+    ),
+    { candidates: [] },
+  )
   applyPageResult(d, 1, { ...result([], []), pageKind: 'cover' }, { candidates: [] })
   d.pages[2] = { ...d.pages[2], status: 'error' }
   return d

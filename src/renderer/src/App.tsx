@@ -19,7 +19,11 @@ interface Nav {
   openSettings: (section?: string) => void
 }
 
-const NavCtx = createContext<Nav>({ route: { name: 'library' }, go: () => undefined, openSettings: () => undefined })
+const NavCtx = createContext<Nav>({
+  route: { name: 'library' },
+  go: () => undefined,
+  openSettings: () => undefined,
+})
 export const useNav = (): Nav => useContext(NavCtx)
 
 export function App(): React.JSX.Element {

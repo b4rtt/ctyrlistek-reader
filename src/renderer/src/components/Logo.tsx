@@ -10,7 +10,15 @@ export function Logo({ size = 36 }: { size?: number }): React.JSX.Element {
         </linearGradient>
       </defs>
       {[0, 90, 180, 270].map((r) => (
-        <path key={r} d={leaf} fill="url(#lg-leaf)" transform={`rotate(${r} 32 32)`} />
+        <path
+          key={r}
+          d={leaf}
+          fill="url(#lg-leaf)"
+          stroke="#0c1410"
+          strokeWidth={1.6}
+          strokeLinejoin="round"
+          transform={`rotate(${r} 32 32)`}
+        />
       ))}
       <circle cx="32" cy="32" r="9" fill="#0c1410" />
       <path d="M29.5 27.5v9l7-4.5-7-4.5Z" fill="#7ef0a6" />

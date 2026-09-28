@@ -147,7 +147,13 @@ export const PAGE_SCHEMA = {
 
 export function pageUserText(req: AnalyzePageRequest): string {
   const { width: w, height: h } = req.image
-  const roster = req.roster.map((r) => ({ id: r.id, name: r.name, gender: r.gender, age: r.age, look: r.description }))
+  const roster = req.roster.map((r) => ({
+    id: r.id,
+    name: r.name,
+    gender: r.gender,
+    age: r.age,
+    look: r.description,
+  }))
   const candidates = req.candidates.length
     ? req.candidates
         .map((c) => {

@@ -10,7 +10,8 @@ export interface Pcm {
 }
 
 export function decodeWav(buf: Buffer): Pcm {
-  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE') throw new Error('Not a WAV file')
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE')
+    throw new Error('Not a WAV file')
   let offset = 12
   let channels = 1
   let sampleRate = 22050
@@ -84,7 +85,12 @@ export function pitchShift(samples: Float32Array, factor: number): Float32Array 
 }
 
 /** Remove leading/trailing silence, keeping `padSec` of it on both ends. */
-export function trimSilence(samples: Float32Array, sampleRate: number, threshold = 0.012, padSec = 0.05): Float32Array {
+export function trimSilence(
+  samples: Float32Array,
+  sampleRate: number,
+  threshold = 0.012,
+  padSec = 0.05,
+): Float32Array {
   let start = 0
   let end = samples.length - 1
   while (start < samples.length && Math.abs(samples[start]) < threshold) start++
@@ -94,7 +100,12 @@ export function trimSilence(samples: Float32Array, sampleRate: number, threshold
   return samples.slice(Math.max(0, start - pad), Math.min(samples.length, end + pad))
 }
 
-export function applyGainAndFades(samples: Float32Array, sampleRate: number, gain: number, fadeSec = 0.008): Float32Array {
+export function applyGainAndFades(
+  samples: Float32Array,
+  sampleRate: number,
+  gain: number,
+  fadeSec = 0.008,
+): Float32Array {
   const out = new Float32Array(samples.length)
   const fade = Math.min(Math.round(fadeSec * sampleRate), Math.floor(samples.length / 2))
   for (let i = 0; i < samples.length; i++) {

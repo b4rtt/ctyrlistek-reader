@@ -5,7 +5,16 @@ import globals from 'globals'
 
 export default tseslint.config(
   {
-    ignores: ['out/**', 'dist/**', 'release/**', 'node_modules/**', 'src/renderer/public/**', 'coverage/**', 'test-results/**', '.e2e-data/**'],
+    ignores: [
+      'out/**',
+      'dist/**',
+      'release/**',
+      'node_modules/**',
+      'src/renderer/public/**',
+      'coverage/**',
+      'test-results/**',
+      '.e2e-data/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

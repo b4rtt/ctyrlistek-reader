@@ -26,7 +26,10 @@ export function playPreview(comicId: string | null, ref: AudioRef): Promise<void
 }
 
 /** Web Speech fallback for platforms without file-based system TTS. */
-export function speakWeb(text: string, opts: { pitch?: number; rate?: number; volume?: number } = {}): Promise<void> {
+export function speakWeb(
+  text: string,
+  opts: { pitch?: number; rate?: number; volume?: number } = {},
+): Promise<void> {
   stopPreview()
   return new Promise((resolve) => {
     const synth = window.speechSynthesis

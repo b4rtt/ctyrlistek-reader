@@ -95,7 +95,11 @@ export function isV3(model: string): boolean {
 }
 
 /** Text sent to ElevenLabs. Returns the offset where the spoken text starts. */
-export function buildElevenText(text: string, p: PerformanceInput, model: string): { text: string; offset: number } {
+export function buildElevenText(
+  text: string,
+  p: PerformanceInput,
+  model: string,
+): { text: string; offset: number } {
   if (!isV3(model)) return { text, offset: 0 }
   const tags = v3Tags(p)
   const prefix = tags.map((t) => `[${t}] `).join('')

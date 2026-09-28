@@ -12,7 +12,14 @@ import { Progress, Segmented, useToast } from '../components/ui'
 import { useComicDoc } from '../hooks/useComicDoc'
 import { updateSettings, useSettings } from '../hooks/useSettings'
 import { useVoices } from '../hooks/useVoices'
-import { castVoices, lineRequest, prepareVoices, recastOne, totalCharacters, type VoiceProgress } from '../pipeline/voices'
+import {
+  castVoices,
+  lineRequest,
+  prepareVoices,
+  recastOne,
+  totalCharacters,
+  type VoiceProgress,
+} from '../pipeline/voices'
 import { PagesEditor } from './PagesEditor'
 
 const GENDER_OPTIONS: { value: Gender; label: string; className?: string }[] = [
@@ -21,7 +28,12 @@ const GENDER_OPTIONS: { value: Gender; label: string; className?: string }[] = [
   { value: 'unknown', label: '❔' },
 ]
 
-const AGE_LABEL: Record<AgeGroup, string> = { child: 'Dítě', adult: 'Dospělý', elderly: 'Starší', unknown: 'Neznámý věk' }
+const AGE_LABEL: Record<AgeGroup, string> = {
+  child: 'Dítě',
+  adult: 'Dospělý',
+  elderly: 'Starší',
+  unknown: 'Neznámý věk',
+}
 
 function sameVoice(a: Character, b: Character): boolean {
   return (
@@ -96,7 +108,8 @@ function CharacterCard({
 
   const sortedVoices = useMemo(() => {
     const score = (v: VoiceInfo): number =>
-      (ch.gender !== 'unknown' && v.gender === ch.gender ? 0 : v.gender === 'unknown' ? 1 : 2) * 10 + (v.languages.includes('cs') ? 0 : 1)
+      (ch.gender !== 'unknown' && v.gender === ch.gender ? 0 : v.gender === 'unknown' ? 1 : 2) * 10 +
+      (v.languages.includes('cs') ? 0 : 1)
     return [...voices].sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name))
   }, [voices, ch.gender])
 
@@ -120,7 +133,9 @@ function CharacterCard({
             {ch.isMain && !ch.isNarrator && <span className="badge ok">Hlavní hrdina</span>}
             {ch.isNarrator && <span className="badge info">Vypravěč</span>}
             {needs && ch.nameConfidence === 'low' && <span className="badge warn">Ověřte jméno</span>}
-            {needs && (ch.gender === 'unknown' || ch.genderConfidence === 'low') && <span className="badge warn">Ověřte pohlaví</span>}
+            {needs && (ch.gender === 'unknown' || ch.genderConfidence === 'low') && (
+              <span className="badge warn">Ověřte pohlaví</span>
+            )}
             <span className="muted">{ch.lineCount} replik</span>
           </div>
         </div>
@@ -133,7 +148,11 @@ function CharacterCard({
         <Segmented
           value={ch.gender}
           attention={needs && (ch.gender === 'unknown' || ch.genderConfidence === 'low')}
-          onChange={(g) => onRecast(withConfirmation({ ...ch, gender: g, genderConfidence: g === 'unknown' ? 'low' : 'high' }))}
+          onChange={(g) =>
+            onRecast(
+              withConfirmation({ ...ch, gender: g, genderConfidence: g === 'unknown' ? 'low' : 'high' }),
+            )
+          }
           options={GENDER_OPTIONS}
         />
         <select
@@ -158,7 +177,11 @@ function CharacterCard({
             value={ch.voice.elevenVoiceId ?? ''}
             onChange={(e) => {
               const v = voices.find((x) => x.id === e.target.value)
-              if (v) onChange({ ...ch, voice: { ...ch.voice, elevenVoiceId: v.id, elevenVoiceName: v.name, manual: true } })
+              if (v)
+                onChange({
+                  ...ch,
+                  voice: { ...ch.voice, elevenVoiceId: v.id, elevenVoiceName: v.name, manual: true },
+                })
             }}
             aria-label="Hlas"
           >
@@ -171,7 +194,12 @@ function CharacterCard({
               </option>
             ))}
           </select>
-          <button className="btn icon" onClick={() => void preview()} title="Přehrát ukázku hlasu" disabled={!ch.voice.elevenVoiceId}>
+          <button
+            className="btn icon"
+            onClick={() => void preview()}
+            title="Přehrát ukázku hlasu"
+            disabled={!ch.voice.elevenVoiceId}
+          >
             {previewing ? <span className="spinner" /> : <Icon name="volume" />}
           </button>
         </div>
@@ -185,7 +213,9 @@ function CharacterCard({
               max={6}
               step={0.5}
               value={ch.voice.pitch}
-              onChange={(e) => onChange({ ...ch, voice: { ...ch.voice, pitch: Number(e.target.value), manual: true } })}
+              onChange={(e) =>
+                onChange({ ...ch, voice: { ...ch.voice, pitch: Number(e.target.value), manual: true } })
+              }
             />
           </label>
           <label className="field grow">
@@ -196,7 +226,9 @@ function CharacterCard({
               max={1.25}
               step={0.05}
               value={ch.voice.rate}
-              onChange={(e) => onChange({ ...ch, voice: { ...ch.voice, rate: Number(e.target.value), manual: true } })}
+              onChange={(e) =>
+                onChange({ ...ch, voice: { ...ch.voice, rate: Number(e.target.value), manual: true } })
+              }
             />
           </label>
           <button className="btn icon" onClick={() => void preview()} title="Přehrát ukázku hlasu">
@@ -274,11 +306,16 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
 
   const cast = doc.characters.filter((c) => c.lineCount > 0 || c.isNarrator)
   const sortedCast = [...cast].sort(
-    (a, b) => Number(needsReview(b)) - Number(needsReview(a)) || Number(b.isMain) - Number(a.isMain) || b.lineCount - a.lineCount,
+    (a, b) =>
+      Number(needsReview(b)) - Number(needsReview(a)) ||
+      Number(b.isMain) - Number(a.isMain) ||
+      b.lineCount - a.lineCount,
   )
   const reviewCount = cast.filter(needsReview).length
   // Sound effects are silent when ElevenLabs effects are switched off.
-  const lines = allLines(doc).filter((l) => l.line.kind !== 'sfx' || settings.voiceMode === 'system' || settings.sfxEnabled)
+  const lines = allLines(doc).filter(
+    (l) => l.line.kind !== 'sfx' || settings.voiceMode === 'system' || settings.sfxEnabled,
+  )
   const voiced = lines.filter((l) => l.line.audio && l.line.audio.provider === settings.voiceMode).length
   const chars = totalCharacters(doc)
   const failedPages = doc.pages.filter((p) => p.status !== 'done').length
@@ -287,12 +324,24 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
     update((d) => ({ ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) }))
 
   const recast = (next: Character): void =>
-    update((d) => recastOne({ ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) }, next.id, settings, voices.eleven))
+    update((d) =>
+      recastOne(
+        { ...d, characters: d.characters.map((c) => (c.id === next.id ? next : c)) },
+        next.id,
+        settings,
+        voices.eleven,
+      ),
+    )
 
   const merge = (from: string, into: string): void => {
     const a = doc.characters.find((c) => c.id === from)
     const b = doc.characters.find((c) => c.id === into)
-    if (!a || !b || !confirm(`Sloučit „${a.name}“ do „${b.name}“? Všechny repliky pak bude mluvit ${b.name}.`)) return
+    if (
+      !a ||
+      !b ||
+      !confirm(`Sloučit „${a.name}“ do „${b.name}“? Všechny repliky pak bude mluvit ${b.name}.`)
+    )
+      return
     update((d) => mergeCharacters(structuredClone(d), into, [from]))
   }
 
@@ -380,15 +429,16 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                 <div className="banner warn">
                   <Icon name="warn" />
                   <span className="grow">
-                    U {reviewCount === 1 ? 'jedné postavy' : `${reviewCount} postav`} si AI není jistá jménem nebo pohlavím. Doplňte je
-                    prosím – podle toho se vybere hlas.
+                    U {reviewCount === 1 ? 'jedné postavy' : `${reviewCount} postav`} si AI není jistá jménem
+                    nebo pohlavím. Doplňte je prosím – podle toho se vybere hlas.
                   </span>
                 </div>
               ) : (
                 <div className="banner">
                   <Icon name="check" />
                   <span className="grow">
-                    Postavy jsou připravené. Hlasy se přiřadily automaticky – můžete je libovolně změnit a poslechnout si ukázku.
+                    Postavy jsou připravené. Hlasy se přiřadily automaticky – můžete je libovolně změnit a
+                    poslechnout si ukázku.
                   </span>
                 </div>
               )}
@@ -430,7 +480,15 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                       <b>
                         Namlouvám repliky… {progress.done} / {progress.total}
                       </b>
-                      <span className="muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 420 }}>
+                      <span
+                        className="muted"
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: 420,
+                        }}
+                      >
                         {progress.current}
                       </span>
                     </div>
@@ -439,7 +497,9 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                 ) : (
                   <>
                     <b>
-                      {voiced >= lines.length ? 'Všechny repliky jsou namluvené' : `Namluveno ${voiced} z ${lines.length} replik`}
+                      {voiced >= lines.length
+                        ? 'Všechny repliky jsou namluvené'
+                        : `Namluveno ${voiced} z ${lines.length} replik`}
                     </b>
                     <span className="small muted">
                       {settings.voiceMode === 'elevenlabs'
@@ -462,7 +522,11 @@ export function Review({ id, initialTab }: { id: string; initialTab?: 'cast' | '
                   </button>
                 )
               )}
-              <button className="btn primary big" onClick={() => void play()} disabled={!!progress || lines.length === 0}>
+              <button
+                className="btn primary big"
+                onClick={() => void play()}
+                disabled={!!progress || lines.length === 0}
+              >
                 <Icon name="play" /> Přehrát komiks
               </button>
             </div>

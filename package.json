@@ -31,7 +31,8 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
-    "dist:win": "npm run build && electron-builder --win --publish never"
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "icon": "electron scripts/make-icon.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -45,17 +46,61 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
+    "pdfjs-dist": "^6.3.289",
     "playwright": "^1.63.0",
     "prettier": "^3.9.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.70.1",
     "vite": "^7.3.6",
     "vitest": "^3.2.7"
   },
   "dependencies": {
-    "openai": "^7.23.0",
-    "pdfjs-dist": "^6.3.289",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "openai": "^7.23.0"
+  },
+  "build": {
+    "appId": "cz.b4rtt.ctyrlistek-reader",
+    "productName": "Čtyřlístek Reader",
+    "copyright": "© 2026 b4rtt – MIT License",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Ctyrlistek-Reader-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "Ctyrlistek-Reader-Setup-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education",
+      "artifactName": "Ctyrlistek-Reader-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
